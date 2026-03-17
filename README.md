@@ -8,7 +8,7 @@
 
 - Arch Linux actualizado (`sudo pacman -Syu`)
 - `yay` u otro AUR helper instalado
-- Acceso a internet
+- [https://aur.archlinux.org/packages/davinci-resolve-studio](https://aur.archlinux.org/packages/davinci-resolve-studio)
 
 ---
 
