@@ -198,18 +198,17 @@ mv DaVinci_Resolve_Studio_*.run davinci-resolve-studio/
 ```bash
 # Versión gratuita
 cd davinci-resolve
-makepkg -fsri
+makepkg -fsi
 
 # O versión Studio
 cd davinci-resolve-studio
-makepkg -fsri
+makepkg -fsi
 ```
 
 | Flag | Descripción |
 |------|-------------|
 | `-f` | Fuerza la recompilación aunque ya exista el paquete |
 | `-s` | Instala dependencias faltantes automáticamente |
-| `-r` | Elimina dependencias de compilación al finalizar |
 | `-i` | Instala el paquete resultante con pacman |
 
 ---
@@ -223,15 +222,24 @@ Estos plugins amplían el soporte de codecs en Linux:
 
 ---
 
-## Paso 8 — Transcripción automática con Whisper (opcional)
+### MP4 / H.264 / H.265 / AAC — resumen de soporte
 
-Para habilitar la transcripción automática con IA local:
+| Formato | Free | Studio |
+|---|---|---|
+| MP4 (con codecs soportados) | ✅ | ✅ |
+| H.264 / H.265 | ❌ | ✅ |
+| AAC | ❌ | ❌ |
+
+Alternativa para convertir a formato compatible con la versión Free:
 
 ```bash
-yay -S python-openai-whisper
+# Video H.264/H.265 + audio AAC → formato compatible:
+ffmpeg -i input.mp4 -c:v dnxhd -profile:v dnxhr_hq -pix_fmt yuv422p -c:a alac output.mov
+
+# Solo audio AAC, video AV1 → solo reconvertir audio:
+ffmpeg -i input.mp4 -c:v copy -c:a pcm_s32le output.mp4
 ```
 
----
 
 ## 📚 Referencias
 
@@ -303,24 +311,6 @@ sudo ln -s /etc/ssl /etc/pki/tls
 
 ```bash
 sudo chmod -R 7777 /opt/resolve/.license/
-```
-
-### MP4 / H.264 / H.265 / AAC — resumen de soporte
-
-| Formato | Free | Studio |
-|---|---|---|
-| MP4 (con codecs soportados) | ✅ | ✅ |
-| H.264 / H.265 | ❌ | ✅ |
-| AAC | ❌ | ❌ |
-
-Alternativa para convertir a formato compatible con la versión Free:
-
-```bash
-# Video H.264/H.265 + audio AAC → formato compatible:
-ffmpeg -i input.mp4 -c:v dnxhd -profile:v dnxhr_hq -pix_fmt yuv422p -c:a alac output.mov
-
-# Solo audio AAC, video AV1 → solo reconvertir audio:
-ffmpeg -i input.mp4 -c:v copy -c:a pcm_s32le output.mp4
 ```
 
 ### Revisar logs de DaVinci Resolve
