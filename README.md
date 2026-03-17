@@ -233,11 +233,14 @@ Estos plugins amplían el soporte de codecs en Linux:
 Alternativa para convertir a formato compatible con la versión Free:
 
 ```bash
-# Video H.264/H.265 + audio AAC → formato compatible:
-ffmpeg -i input.mp4 -c:v dnxhd -profile:v dnxhr_hq -pix_fmt yuv422p -c:a alac output.mov
+# MPEG-4 (muy ligero, DR Free lo soporta, algo de pérdida): MPEG-4 -q:v 2 ~ 2–5 GB Media
+ffmpeg -i input.mp4 -c:v mpeg4 -q:v 2 -c:a alac output.mp4
 
-# Solo audio AAC, video AV1 → solo reconvertir audio:
-ffmpeg -i input.mp4 -c:v copy -c:a pcm_s32le output.mp4
+# AV1 con audio PCM (moderno, buena compresión, compatible con DR Free): AV1 CRF 30 ~ 1–3 GB Buena
+ffmpeg -i input.mp4 -c:v libsvtav1 -crf 30 -preset 6 -c:a pcm_s32le output.mp4
+
+# DNxHR LB (versión ligera de DNxHR, la que ya tienes pero más pequeña): DNxHR LB ~ 10–15 GB Buena
+ffmpeg -i input.mp4 -c:v dnxhd -profile:v dnxhr_lb -pix_fmt yuv422p -c:a alac output.mov
 ```
 
 
