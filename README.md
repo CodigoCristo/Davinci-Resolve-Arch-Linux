@@ -319,6 +319,28 @@ echo en_US.UTF-8 UTF-8 >> /etc/locale.gen ; locale-gen
 exit
 ```
 
+### Resolve no escribe acentos
+
+Xmodmap es una herramienta de X11 que te permite reasignar las teclas del teclado a nivel del servidor gráfico y funciona bien wayland gracias a Xwayland
+
+```bash
+cat >> ~/.Xmodmap << 'EOF'
+keycode  26 = e E e E eacute Eacute EuroSign cent
+keycode  38 = a A a A aacute Aacute ae AE
+keycode  31 = i I i I iacute Iacute rightarrow idotless
+keycode  32 = o O o O oacute Oacute oslash Oslash
+keycode  30 = u U u U uacute Uacute downarrow uparrow
+keycode  32 = o O o O oacute Oacute oslash Oslash
+EOF
+```
+
+Y para aplicarlo sin reiniciar:
+```bash
+xmodmap ~/.Xmodmap
+```
+
+Y lo puedes agregar a tu archivo de shell, .zshrc .bashrc
+
 ### La app dice que ya hay otra instancia corriendo (lock file)
 
 ```bash
