@@ -321,7 +321,7 @@ exit
 ### Resolve se bloquea al poner acentos 
 
 Lo solución fue muy sencilla fue agregar el idioma Ingles al locale
-Fuente : https://youtu.be/5Mo-GaBIpT4?si=oSeBf7WDO-CZTjI6 [[https://youtu.be/5Mo-GaBIpT4?si=oSeBf7WDO-CZTjI6](https://youtu.be/5Mo-GaBIpT4?si=oSeBf7WDO-CZTjI6)
+Fuente :[https://youtu.be/5Mo-GaBIpT4?si=oSeBf7WDO-CZTjI6](https://youtu.be/5Mo-GaBIpT4?si=oSeBf7WDO-CZTjI6)
 
 ```bash
 sudo su
