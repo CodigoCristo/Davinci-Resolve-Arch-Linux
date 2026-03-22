@@ -341,6 +341,10 @@ xmodmap ~/.Xmodmap
 
 Y lo puedes agregar a tu archivo de shell, .zshrc .bashrc
 
+### No reconoce las Tipografias instaladas en ~/.local/share/fonts
+
+| Pestaña de Fusion | Menú de Fusion | Ajustes de Fusion | Mapa de Ruta | Defaults > Fonts > Select folder | 
+
 ### La app dice que ya hay otra instancia corriendo (lock file)
 
 ```bash
