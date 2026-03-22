@@ -308,11 +308,13 @@ DaVinci Resolve usa ALSA directamente. Si usas PipeWire o PulseAudio:
 yay -S pipewire pipewire-pulse pipewire-alsa lib32-pipewire lib32-pipewire-jack lib32-pipewire-v4l2 
 ```
 
-### Resolve no cierra el terminal / "Socket disconnected"
+### Resolve se bloquea al poner acentos 
+
+Lo solución fue muy sencilla fue agregar el idioma Ingles al locale
+Fuente : https://youtu.be/5Mo-GaBIpT4?si=oSeBf7WDO-CZTjI6 [[https://youtu.be/5Mo-GaBIpT4?si=oSeBf7WDO-CZTjI6](https://youtu.be/5Mo-GaBIpT4?si=oSeBf7WDO-CZTjI6)
 
 ```bash
-# Lanzar así para evitar el mensaje:
-/opt/resolve/bin/resolve | cat
+sudo echo en_US.UTF-8 UTF-8 >> /etc/locale.gen ; sudo locale-gen
 ```
 
 ### La app dice que ya hay otra instancia corriendo (lock file)
