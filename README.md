@@ -278,16 +278,16 @@ QT_QPA_PLATFORM=xcb /opt/resolve/bin/resolve
 
 ### Error OpenCL -1001 (NVIDIA)
 
-Asegúrate de que la versión de `opencl-nvidia` coincida con la del driver instalado. Verifica con `clinfo` que el dispositivo NVIDIA aparece listado.
+Asegúrate de que la versión de `opencl-nvidia` coincida con la del driver instalado. 
+Si traes instalado `opencl-mesa` para que no genere conflictos opencl de tu grafica
+Verifica con `clinfo -l` que el dispositivo NVIDIA aparece listado.
 
 ### Sin audio en la previsualización
 
 DaVinci Resolve usa ALSA directamente. Si usas PipeWire o PulseAudio:
 
 ```bash
-sudo pacman -S pipewire-alsa
-# o
-sudo pacman -S pulseaudio-alsa
+yay -S pipewire pipewire-pulse pipewire-alsa lib32-pipewire lib32-pipewire-jack lib32-pipewire-v4l2 
 ```
 
 ### Resolve no cierra el terminal / "Socket disconnected"
@@ -316,6 +316,12 @@ sudo ln -s /etc/ssl /etc/pki/tls
 ```bash
 sudo chmod -R 7777 /opt/resolve/.license/
 ```
+
+## 📚 Davinci Resolve Studio Full
+
+- [https://pastebin.com/raw/vMwatbqi](https://pastebin.com/raw/vMwatbqi)
+
+---
 
 ### Revisar logs de DaVinci Resolve
 
