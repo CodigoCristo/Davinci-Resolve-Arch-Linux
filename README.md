@@ -306,7 +306,7 @@ DaVinci Resolve usa ALSA directamente
 
 Si usas PipeWire:
 ```bash
-yay -S pipewire pipewire-pulse pipewire-alsa lib32-pipewire lib32-pipewire-jack lib32-pipewire-v4l2 
+yay -S pipewire pipewire-pulse pipewire-alsa
 ```
 
 Si usas PulseAudio:
