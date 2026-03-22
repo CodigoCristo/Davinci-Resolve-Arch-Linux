@@ -31,22 +31,32 @@ sudo pacman -S nvidia-open-lts nvidia-utils nvidia-settings
 
 # Blackwell — cualquier kernel (necesita linux-headers)
 sudo pacman -S nvidia-open-dkms nvidia-utils nvidia-settings
+```
 
+```bash
 # Ada / Ampere / Turing — driver principal
 yay -S nvidia-580xx-dkms nvidia-580xx-utils nvidia-settings
 
 # Maxwell / Pascal / Volta — legacy
 yay -S nvidia-580xx-dkms nvidia-580xx-utils nvidia-settings
+```
 
+```bash
 # Kepler — legacy sin soporte
 yay -S nvidia-470xx-dkms nvidia-470xx-utils
+```
 
+```bash
 # Fermi — legacy
 yay -S nvidia-390xx-dkms nvidia-390xx-utils
+```
 
+```bash
 # Tesla — legacy
 yay -S nvidia-340xx-dkms
+```
 
+```bash
 # Curie y anterior — open source
 sudo pacman -S xf86-video-nouveau
 ```
@@ -65,34 +75,7 @@ yay -S nvidia-580xx-dkms nvidia-580xx-utils
 sudo pacman -S nvidia-settings
 ```
 
-### CUDA Toolkit
-```bash
-# CUDA completo (compilador nvcc, bibliotecas, cabeceras)
-sudo pacman -S cuda
 
-# Verificar instalación
-nvcc --version
-nvidia-smi
-```
-
-### CUDA — Bibliotecas adicionales
-```bash
-# cuDNN — redes neuronales (TensorFlow, PyTorch)
-sudo pacman -S cudnn
-
-# NCCL — comunicación multi-GPU
-sudo pacman -S nccl
-
-# OpenCL — cómputo paralelo genérico
-sudo pacman -S opencl-nvidia ocl-icd
-
-# 32-bit OpenCL (compatibilidad)
-sudo pacman -S lib32-opencl-nvidia
-
-# clinfo — verificar OpenCL
-sudo pacman -S clinfo
-clinfo
-```
 
 ### Herramientas de monitorización y desarrollo
 ```bash
@@ -109,28 +92,6 @@ sudo pacman -S vulkan-icd-loader lib32-vulkan-icd-loader
 
 # Mesa utils — diagnóstico OpenGL/Vulkan
 sudo pacman -S mesa-utils vulkan-tools
-```
-
-### Machine Learning / Deep Learning
-```bash
-# PyTorch con CUDA (instalar con pip en entorno virtual)
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
-
-# TensorFlow con CUDA
-pip install tensorflow[and-cuda]
-
-# JAX con CUDA
-pip install "jax[cuda12]"
-```
-
-### Instalación completa recomendada (Blackwell / Ada / Ampere)
-```bash
-# Driver + utilidades + CUDA + cuDNN + OpenCL + Vulkan
-sudo pacman -S nvidia-open nvidia-utils lib32-nvidia-utils \
-               nvidia-settings cuda cudnn nccl \
-               opencl-nvidia ocl-icd lib32-opencl-nvidia \
-               vulkan-icd-loader lib32-vulkan-icd-loader \
-               nvtop mesa-utils vulkan-tools
 ```
 
 ---
