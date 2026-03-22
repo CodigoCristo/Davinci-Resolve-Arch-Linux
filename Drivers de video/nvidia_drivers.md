@@ -9,14 +9,15 @@ Fuente: [Arch Wiki — NVIDIA](https://wiki.archlinux.org/title/NVIDIA)
 | Familia GPU | Arquitectura | Driver principal | Alternativa | Estado |
 |---|---|---|---|---|
 | RTX 50xx / PRO 5000 | Blackwell (GB) | `nvidia-open` | — | Recomendado por upstream |
-| RTX 40xx / 30xx / 20xx / GTX 16xx | Ada / Ampere / Turing | `nvidia-580xx-dkms` (AUR) | `nvidia-open`* | Soportado |
+| RTX 40xx / RTX 30xx | Ada / Ampere | `nvidia-580xx-dkms` (AUR) | `nvidia-open` | Soportado |
+| RTX 20xx / GTX 16xx | Turing | `nvidia-580xx-dkms` (AUR) | x (sin RTD3) | Soportado |
 | GTX 10xx / GTX 900 / GTX 750 / Titan V | Pascal / Maxwell / Volta | `nvidia-580xx-dkms` (AUR) | — | Legacy, soportado |
 | GTX 700 / GTX 600 | Kepler (GK) | `nvidia-470xx-dkms` (AUR) | — | Legacy, sin soporte |
 | GTX 500 / GTX 400 | Fermi (GF) | `nvidia-390xx-dkms` (AUR) | — | Legacy |
 | 300/200/100/9xx/8xx | Tesla (G80-GT200) | `nvidia-340xx-dkms` (AUR) | `nouveau` | Legacy |
 | Curie (G70) y anterior | — | sin driver propietario | `nouveau` | Sin soporte |
 
-> *`nvidia-open` en Turing: sin RTD3 Power Management. En laptops Ampere: posibles cuelgues.
+> Turing (RTX 20xx / GTX 16xx): `nvidia-open` no tiene RTD3 → sin alternativa, usar solo `nvidia-580xx-dkms`.
 
 ---
 
@@ -251,44 +252,44 @@ clinfo | grep "Device Name"         # OpenCL
 ### Desktop RTX
 | Modelo | Chip | Año | Driver | Alternativa |
 |---|---|---|---|---|
-| GeForce RTX 2080 Ti | TU102 | 2018 | `nvidia-580xx-dkms` | `nvidia-open`* |
-| GeForce RTX 2080 Super | TU104 | 2019 | `nvidia-580xx-dkms` | `nvidia-open`* |
-| GeForce RTX 2080 | TU104 | 2018 | `nvidia-580xx-dkms` | `nvidia-open`* |
-| GeForce RTX 2070 Super | TU104 | 2019 | `nvidia-580xx-dkms` | `nvidia-open`* |
-| GeForce RTX 2070 | TU106 | 2018 | `nvidia-580xx-dkms` | `nvidia-open`* |
-| GeForce RTX 2060 Super | TU106 | 2019 | `nvidia-580xx-dkms` | `nvidia-open`* |
-| GeForce RTX 2060 | TU106 | 2019 | `nvidia-580xx-dkms` | `nvidia-open`* |
+| GeForce RTX 2080 Ti | TU102 | 2018 | `nvidia-580xx-dkms` | x |
+| GeForce RTX 2080 Super | TU104 | 2019 | `nvidia-580xx-dkms` | x |
+| GeForce RTX 2080 | TU104 | 2018 | `nvidia-580xx-dkms` | x |
+| GeForce RTX 2070 Super | TU104 | 2019 | `nvidia-580xx-dkms` | x |
+| GeForce RTX 2070 | TU106 | 2018 | `nvidia-580xx-dkms` | x |
+| GeForce RTX 2060 Super | TU106 | 2019 | `nvidia-580xx-dkms` | x |
+| GeForce RTX 2060 | TU106 | 2019 | `nvidia-580xx-dkms` | x |
 
 ### Desktop GTX
 | Modelo | Chip | Año | Driver | Alternativa |
 |---|---|---|---|---|
-| GeForce GTX 1660 Ti | TU116 | 2019 | `nvidia-580xx-dkms` | `nvidia-open`* |
-| GeForce GTX 1660 Super | TU116 | 2019 | `nvidia-580xx-dkms` | `nvidia-open`* |
-| GeForce GTX 1660 | TU116 | 2019 | `nvidia-580xx-dkms` | `nvidia-open`* |
-| GeForce GTX 1650 Super | TU116 | 2019 | `nvidia-580xx-dkms` | `nvidia-open`* |
-| GeForce GTX 1650 | TU117 | 2019 | `nvidia-580xx-dkms` | `nvidia-open`* |
+| GeForce GTX 1660 Ti | TU116 | 2019 | `nvidia-580xx-dkms` | x |
+| GeForce GTX 1660 Super | TU116 | 2019 | `nvidia-580xx-dkms` | x |
+| GeForce GTX 1660 | TU116 | 2019 | `nvidia-580xx-dkms` | x |
+| GeForce GTX 1650 Super | TU116 | 2019 | `nvidia-580xx-dkms` | x |
+| GeForce GTX 1650 | TU117 | 2019 | `nvidia-580xx-dkms` | x |
 
 ### Laptop RTX
 | Modelo | Chip | Año | Driver | Alternativa |
 |---|---|---|---|---|
-| GeForce RTX 2080 Super Laptop GPU | TU104 | 2020 | `nvidia-580xx-dkms` | `nvidia-open`* |
-| GeForce RTX 2080 Laptop GPU | TU104 | 2019 | `nvidia-580xx-dkms` | `nvidia-open`* |
-| GeForce RTX 2070 Super Laptop GPU | TU104 | 2020 | `nvidia-580xx-dkms` | `nvidia-open`* |
-| GeForce RTX 2070 Laptop GPU | TU106 | 2019 | `nvidia-580xx-dkms` | `nvidia-open`* |
-| GeForce RTX 2060 Laptop GPU | TU106 | 2019 | `nvidia-580xx-dkms` | `nvidia-open`* |
+| GeForce RTX 2080 Super Laptop GPU | TU104 | 2020 | `nvidia-580xx-dkms` | x |
+| GeForce RTX 2080 Laptop GPU | TU104 | 2019 | `nvidia-580xx-dkms` | x |
+| GeForce RTX 2070 Super Laptop GPU | TU104 | 2020 | `nvidia-580xx-dkms` | x |
+| GeForce RTX 2070 Laptop GPU | TU106 | 2019 | `nvidia-580xx-dkms` | x |
+| GeForce RTX 2060 Laptop GPU | TU106 | 2019 | `nvidia-580xx-dkms` | x |
 
 ### Laptop GTX
 | Modelo | Chip | Año | Driver | Alternativa |
 |---|---|---|---|---|
-| GeForce GTX 1660 Ti Laptop GPU | TU116 | 2019 | `nvidia-580xx-dkms` | `nvidia-open`* |
-| GeForce GTX 1650 Ti Laptop GPU | TU117 | 2020 | `nvidia-580xx-dkms` | `nvidia-open`* |
-| GeForce GTX 1650 Laptop GPU | TU117 | 2019 | `nvidia-580xx-dkms` | `nvidia-open`* |
+| GeForce GTX 1660 Ti Laptop GPU | TU116 | 2019 | `nvidia-580xx-dkms` | x |
+| GeForce GTX 1650 Ti Laptop GPU | TU117 | 2020 | `nvidia-580xx-dkms` | x |
+| GeForce GTX 1650 Laptop GPU | TU117 | 2019 | `nvidia-580xx-dkms` | x |
 
 ### MX Series (Turing)
 | Modelo | Chip | Año | Driver | Alternativa |
 |---|---|---|---|---|
-| GeForce MX550 | TU117 | 2022 | `nvidia-580xx-dkms` | `nvidia-open`* |
-| GeForce MX450 | TU117 | 2020 | `nvidia-580xx-dkms` | `nvidia-open`* |
+| GeForce MX550 | TU117 | 2022 | `nvidia-580xx-dkms` | x |
+| GeForce MX450 | TU117 | 2020 | `nvidia-580xx-dkms` | x |
 
 ---
 
