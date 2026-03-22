@@ -96,7 +96,7 @@ sudo pacman -S opencl-mesa
 > Para activar Rusticl en AMD: `RUSTICL_ENABLE=radeonsi /opt/resolve/bin/resolve`
 
 
-Si tienes `rocm-opencl-runtime` o `opencl-amd` debes borrar `opencl-mesa`, solo funciona con un paquete de openCL
+Si tienes `rocm-opencl-runtime` o `opencl-amd` debes borrar `opencl-mesa`, para que no genere conflicto solo funciona con un paquete de openCL
 
 ---
 
@@ -297,7 +297,7 @@ QT_QPA_PLATFORM=xcb /opt/resolve/bin/resolve
 ### Error OpenCL -1001 (NVIDIA)
 
 Asegúrate de que la versión de `opencl-nvidia` coincida con la del driver instalado. 
-Si traes instalado `opencl-mesa` para que no genere conflictos opencl de tu grafica
+Si traes instalado `opencl-mesa` debes borrarlo para evitar conflictos opencl de tu grafica
 Verifica con `clinfo -l` que el dispositivo NVIDIA aparece listado.
 
 ### Sin audio en la previsualización
