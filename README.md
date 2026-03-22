@@ -263,9 +263,8 @@ ffmpeg -i input.mp4 -c:v dnxhd -profile:v dnxhr_lb -pix_fmt yuv422p -c:a alac ou
 sudo rm /opt/resolve/libs/libglib-2.0.so*
 sudo rm /opt/resolve/libs/libgio-2.0.so*
 sudo rm /opt/resolve/libs/libgmodule-2.0.so*
-
 # O forzar uso de las librerías del sistema al lanzar:
-LD_PRELOAD="/usr/lib/libgio-2.0.so /usr/lib/libgmodule-2.0.so" /opt/resolve/bin/resolve
+LD_PRELOAD="/usr/lib/libglib-2.0.so /usr/lib/libgio-2.0.so /usr/lib/libgmodule-2.0.so" /opt/resolve/bin/resolve
 ```
 
 ### No abre en Wayland
