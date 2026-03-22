@@ -314,7 +314,9 @@ Lo solución fue muy sencilla fue agregar el idioma Ingles al locale
 Fuente : https://youtu.be/5Mo-GaBIpT4?si=oSeBf7WDO-CZTjI6 [[https://youtu.be/5Mo-GaBIpT4?si=oSeBf7WDO-CZTjI6](https://youtu.be/5Mo-GaBIpT4?si=oSeBf7WDO-CZTjI6)
 
 ```bash
-sudo echo en_US.UTF-8 UTF-8 >> /etc/locale.gen ; sudo locale-gen
+sudo su
+echo en_US.UTF-8 UTF-8 >> /etc/locale.gen ; locale-gen
+exit
 ```
 
 ### La app dice que ya hay otra instancia corriendo (lock file)
