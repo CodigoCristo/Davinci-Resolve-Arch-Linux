@@ -36,23 +36,25 @@ sudo pacman -S nvidia-open-dkms nvidia-utils lib32-nvidia-utils opencl-nvidia li
 ```bash
 # Ada / Ampere / Turing — driver principal
 # Maxwell / Pascal / Volta — legacy
-yay -S nvidia-580xx-dkms nvidia-580xx-utils nvidia-settings
-
+# 
+# Cualquier kernel - necesita linux-headers
+yay -S nvidia-580xx-dkms nvidia-580xx-utils lib32-nvidia-580xx-utils opencl-nvidia-580xx lib32-opencl-nvidia-580xx nvidia-580xx-settings
 ```
 
 ```bash
 # Kepler — legacy sin soporte
-yay -S nvidia-470xx-dkms nvidia-470xx-utils
+# Cualquier kernel - necesita linux-headers
+yay -S nvidia-470xx-dkms nvidia-470xx-utils lib32-nvidia-470xx-utils opencl-nvidia-470xx lib32-opencl-nvidia-470xx nvidia-470xx-settings mhwd-nvidia-470xx
 ```
 
 ```bash
 # Fermi — legacy
-yay -S nvidia-390xx-dkms nvidia-390xx-utils
+yay -S nvidia-390xx-dkms nvidia-390xx-utils lib32-nvidia-390xx-utils opencl-nvidia-390xx lib32-opencl-nvidia-390xx nvidia-390xx-settings mhwd-nvidia-390xx
 ```
 
 ```bash
 # Tesla — legacy
-yay -S nvidia-340xx-dkms
+yay -S nvidia-340xx-dkms nvidia-340xx-utils lib32-nvidia-340xx-utils opencl-nvidia-340xx lib32-opencl-nvidia-340xx nvidia-340xx-settings
 ```
 
 ```bash
@@ -61,20 +63,6 @@ sudo pacman -S xf86-video-nouveau vulkan-nouveau lib32-vulkan-nouveau
 ```
 
 ---
-
-## Paquetes completos para CUDA y aceleración GPU
-
-### Driver + utilidades base
-```bash
-# Con nvidia-open (Blackwell)
-sudo pacman -S nvidia-open nvidia-utils lib32-nvidia-utils nvidia-settings
-
-# Con nvidia-580xx-dkms (Turing → Ada, Maxwell → Volta)
-yay -S nvidia-580xx-dkms nvidia-580xx-utils
-sudo pacman -S nvidia-settings
-```
-
-
 
 ### Aceleración de vídeo por hardware (VA-API / VDPAU / NVDEC)
 ```bash
