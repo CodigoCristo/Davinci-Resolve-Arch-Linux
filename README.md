@@ -302,10 +302,20 @@ Verifica con `clinfo -l` que el dispositivo NVIDIA aparece listado.
 
 ### Sin audio en la previsualización
 
-DaVinci Resolve usa ALSA directamente. Si usas PipeWire o PulseAudio:
+DaVinci Resolve usa ALSA directamente
 
+Si usas PipeWire:
 ```bash
 yay -S pipewire pipewire-pulse pipewire-alsa lib32-pipewire lib32-pipewire-jack lib32-pipewire-v4l2 
+```
+
+Si usas PulseAudio:
+```bash
+yay -S pulse pulseaudio-alsa
+sudo su
+echo pcm.!default pulse > /etc/asound.conf
+echo ctl.!default pulse >> /etc/asound.conf
+exit
 ```
 
 ### Resolve se bloquea al poner acentos 
