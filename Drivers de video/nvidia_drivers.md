@@ -517,6 +517,45 @@ El paquete `nvidia` de los repos oficiales fue reemplazado. La distribución act
 - En **laptops Ampere**: posibles cuelgues, preferir `nvidia-580xx-dkms`
 - En **Ada Lovelace**: funciona bien como alternativa
 
+### GPUs Turing sin RTD3 Power Management (si usas nvidia-open)
+
+> RTD3 (Runtime D3) permite que la GPU entre en estado de bajo consumo cuando no se usa.
+> En todas las GPUs Turing, `nvidia-open` **no implementa RTD3** — la GPU no apaga/duerme entre usos.
+> Impacto real: mayor consumo en reposo, especialmente en laptops.
+> Solución: usar `nvidia-580xx-dkms` en su lugar.
+
+**Desktop afectado:**
+
+| Modelo | Chip | Año |
+|---|---|---|
+| GeForce RTX 2080 Ti | TU102 | 2018 |
+| GeForce RTX 2080 Super | TU104 | 2019 |
+| GeForce RTX 2080 | TU104 | 2018 |
+| GeForce RTX 2070 Super | TU104 | 2019 |
+| GeForce RTX 2070 | TU106 | 2018 |
+| GeForce RTX 2060 Super | TU106 | 2019 |
+| GeForce RTX 2060 | TU106 | 2019 |
+| GeForce GTX 1660 Ti | TU116 | 2019 |
+| GeForce GTX 1660 Super | TU116 | 2019 |
+| GeForce GTX 1660 | TU116 | 2019 |
+| GeForce GTX 1650 Super | TU116 | 2019 |
+| GeForce GTX 1650 | TU117 | 2019 |
+
+**Laptop afectado (mayor impacto en batería):**
+
+| Modelo | Chip | Año |
+|---|---|---|
+| GeForce RTX 2080 Super Laptop GPU | TU104 | 2020 |
+| GeForce RTX 2080 Laptop GPU | TU104 | 2019 |
+| GeForce RTX 2070 Super Laptop GPU | TU104 | 2020 |
+| GeForce RTX 2070 Laptop GPU | TU106 | 2019 |
+| GeForce RTX 2060 Laptop GPU | TU106 | 2019 |
+| GeForce GTX 1660 Ti Laptop GPU | TU116 | 2019 |
+| GeForce GTX 1650 Ti Laptop GPU | TU117 | 2020 |
+| GeForce GTX 1650 Laptop GPU | TU117 | 2019 |
+| GeForce MX550 | TU117 | 2022 |
+| GeForce MX450 | TU117 | 2020 |
+
 ### Conflicto de módulos — blacklist nouveau
 Obligatorio cuando se usa cualquier driver propietario:
 
