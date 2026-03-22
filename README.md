@@ -313,8 +313,8 @@ Si usas PulseAudio:
 ```bash
 yay -S pulse pulseaudio-alsa
 sudo su
-echo pcm.!default pulse > /etc/asound.conf
-echo ctl.!default pulse >> /etc/asound.conf
+echo 'pcm.!default pulse' > /etc/asound.conf
+echo 'ctl.!default pulse' >> /etc/asound.conf
 exit
 ```
 
