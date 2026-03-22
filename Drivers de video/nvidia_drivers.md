@@ -23,14 +23,14 @@ Fuente: [Arch Wiki — NVIDIA](https://wiki.archlinux.org/title/NVIDIA)
 ## Instalación por driver
 
 ```bash
-# Blackwell — linux estándar
-sudo pacman -S nvidia-open nvidia-utils lib32-nvidia-utils opencl-nvidia nvidia-settings
+# Blackwell — Linux estándar - necesita linux-headers
+sudo pacman -S nvidia-open nvidia-utils lib32-nvidia-utils opencl-nvidia lib32-opencl-nvidia nvidia-settings
 
-# Blackwell — linux-lts
-sudo pacman -S nvidia-open-lts nvidia-utils lib32-nvidia-utils opencl-nvidia nvidia-settings
+# Blackwell — Linux-lts  - necesita linux-headers
+sudo pacman -S nvidia-open-lts nvidia-utils lib32-nvidia-utils opencl-nvidia lib32-opencl-nvidia nvidia-settings
 
-# Blackwell — cualquier kernel (necesita linux-headers)
-sudo pacman -S nvidia-open-dkms nvidia-utils lib32-nvidia-utils opencl-nvidia nvidia-settings
+# Blackwell — Cualquier kernel - necesita linux-headers
+sudo pacman -S nvidia-open-dkms nvidia-utils lib32-nvidia-utils opencl-nvidia lib32-opencl-nvidia nvidia-settings
 ```
 
 ```bash
@@ -57,7 +57,7 @@ yay -S nvidia-340xx-dkms
 
 ```bash
 # Curie y anterior — open source
-sudo pacman -S xf86-video-nouveau
+sudo pacman -S xf86-video-nouveau vulkan-nouveau lib32-vulkan-nouveau
 ```
 
 ---
@@ -111,16 +111,12 @@ sudo pacman -S vdpauinfo      # verificar VDPAU
 sudo pacman -S nvtop
 
 # Vulkan
-sudo pacman -S vulkan-icd-loader lib32-vulkan-icd-loader
-
-# Mesa utils — diagnóstico OpenGL/Vulkan
-sudo pacman -S mesa-utils vulkan-tools 
+sudo pacman -S mesa-utils vulkan-tools vulkan-icd-loader lib32-vulkan-icd-loader
 ```
 
 ### Verificar instalación completa
 ```bash
 nvidia-smi                          # driver y GPU
-nvcc --version                      # CUDA compiler
 vainfo                              # VA-API (necesita libva-nvidia-driver)
 vdpauinfo                           # VDPAU
 vulkaninfo --summary                # Vulkan
@@ -155,23 +151,6 @@ clinfo | grep "Device Name"         # OpenCL
 | GeForce RTX 5060 Laptop GPU | GB206 |
 | GeForce RTX 5050 Laptop GPU | GB207 |
 
-### Workstation Desktop
-| Modelo | Chip |
-|---|---|
-| RTX PRO 6000 Blackwell | GB202 |
-| RTX PRO 5000 Blackwell | GB203 |
-| RTX PRO 4500 Blackwell | GB205 |
-| RTX PRO 4000 Blackwell | GB206 |
-| DGX Spark GB20B | GB20B |
-
-### Workstation Mobile
-| Modelo |
-|---|
-| RTX PRO 3000 Mobile |
-| RTX PRO 2000 Mobile |
-| RTX PRO 1000 Mobile |
-| RTX PRO 500 Mobile |
-
 ---
 
 ## Ada Lovelace (AD) — `nvidia-580xx-dkms` (AUR)
@@ -201,20 +180,6 @@ clinfo | grep "Device Name"         # OpenCL
 | GeForce RTX 4070 Laptop GPU |
 | GeForce RTX 4060 Laptop GPU |
 | GeForce RTX 4050 Laptop GPU |
-
-### Workstation
-| Modelo |
-|---|
-| RTX 6000 Ada Generation |
-| RTX 5000 Ada Generation |
-| RTX 4500 Ada Generation |
-| RTX 4000 Ada Generation |
-| RTX 4000 SFF Ada Generation |
-| RTX 3500 Ada Generation |
-| RTX 3000 Ada Generation |
-| RTX 2000 Ada Generation |
-| RTX 1000 Ada Generation |
-| RTX 500 Ada Generation |
 
 ---
 
@@ -248,17 +213,6 @@ clinfo | grep "Device Name"         # OpenCL
 | GeForce RTX 3060 Laptop GPU |
 | GeForce RTX 3050 Ti Laptop GPU |
 | GeForce RTX 3050 Laptop GPU |
-
-### Workstation
-| Modelo |
-|---|
-| RTX A6000 |
-| RTX A5000 |
-| RTX A4000 |
-| RTX A3000 |
-| RTX A2000 |
-| RTX A1000 |
-| RTX A500 |
 
 ---
 
@@ -579,21 +533,11 @@ dkms status
 sudo dkms autoinstall
 ```
 
-### Variables de entorno útiles para CUDA
-```bash
-# Añadir a ~/.bashrc o ~/.zshrc
-export CUDA_HOME=/opt/cuda
-export PATH=$CUDA_HOME/bin:$PATH
-export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
-```
 
 ### Verificar instalación completa
 ```bash
 # Ver GPU y driver cargado
 nvidia-smi
-
-# Ver versión CUDA
-nvcc --version
 
 # Ver dispositivos OpenCL
 clinfo | grep "Device Name"
