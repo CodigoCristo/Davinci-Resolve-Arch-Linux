@@ -6,15 +6,17 @@ Fuente: [Arch Wiki — NVIDIA](https://wiki.archlinux.org/title/NVIDIA)
 
 ## Resumen rápido
 
-| Familia GPU | Arquitectura | Driver Arch Linux | Estado |
-|---|---|---|---|
-| RTX 50xx / PRO 5000 | Blackwell (GB) | `nvidia-open` | Recomendado por upstream |
-| RTX 40xx / RTX 30xx / RTX 20xx / GTX 16xx | Ada / Ampere / Turing | `nvidia` | Soportado |
-| GTX 10xx / GTX 900 / GTX 750 / Titan V | Pascal / Maxwell / Volta | `nvidia-580xx-dkms` (AUR) | Legacy, soportado |
-| GTX 700 / GTX 600 | Kepler (GK) | `nvidia-470xx-dkms` (AUR) | Legacy, sin soporte |
-| GTX 500 / GTX 400 | Fermi (GF) | `nvidia-390xx-dkms` (AUR) | Legacy |
-| 300/200/100/9xx/8xx | Tesla (G80-GT200) | `nvidia-340xx-dkms` (AUR) | Legacy, alternativa: `nouveau` |
-| Curie (G70) y anterior | — | sin driver propietario | Usar `nouveau` |
+| Familia GPU | Arquitectura | Driver principal | Alternativa | Estado |
+|---|---|---|---|---|
+| RTX 50xx / PRO 5000 | Blackwell (GB) | `nvidia-open` | — | Recomendado por upstream |
+| RTX 40xx / 30xx / 20xx / GTX 16xx | Ada / Ampere / Turing | `nvidia-580xx-dkms` (AUR) | `nvidia-open`* | Soportado |
+| GTX 10xx / GTX 900 / GTX 750 / Titan V | Pascal / Maxwell / Volta | `nvidia-580xx-dkms` (AUR) | — | Legacy, soportado |
+| GTX 700 / GTX 600 | Kepler (GK) | `nvidia-470xx-dkms` (AUR) | — | Legacy, sin soporte |
+| GTX 500 / GTX 400 | Fermi (GF) | `nvidia-390xx-dkms` (AUR) | — | Legacy |
+| 300/200/100/9xx/8xx | Tesla (G80-GT200) | `nvidia-340xx-dkms` (AUR) | `nouveau` | Legacy |
+| Curie (G70) y anterior | — | sin driver propietario | `nouveau` | Sin soporte |
+
+> *`nvidia-open` en Turing: sin RTD3 Power Management. En laptops Ampere: posibles cuelgues.
 
 ---
 
@@ -22,37 +24,113 @@ Fuente: [Arch Wiki — NVIDIA](https://wiki.archlinux.org/title/NVIDIA)
 
 ```bash
 # Blackwell — linux estándar
-sudo pacman -S nvidia-open
+sudo pacman -S nvidia-open nvidia-utils nvidia-settings
 
 # Blackwell — linux-lts
-sudo pacman -S nvidia-open-lts
+sudo pacman -S nvidia-open-lts nvidia-utils nvidia-settings
 
-# Blackwell — cualquier kernel
-sudo pacman -S nvidia-open-dkms
+# Blackwell — cualquier kernel (necesita linux-headers)
+sudo pacman -S nvidia-open-dkms nvidia-utils nvidia-settings
 
-# Ada / Ampere / Turing — linux estándar
-sudo pacman -S nvidia
+# Ada / Ampere / Turing — driver principal
+yay -S nvidia-580xx-dkms nvidia-580xx-utils nvidia-settings
 
-# Ada / Ampere / Turing — linux-lts
-sudo pacman -S nvidia-lts
+# Maxwell / Pascal / Volta — legacy
+yay -S nvidia-580xx-dkms nvidia-580xx-utils nvidia-settings
 
-# Ada / Ampere / Turing — cualquier kernel
-sudo pacman -S nvidia-dkms
+# Kepler — legacy sin soporte
+yay -S nvidia-470xx-dkms nvidia-470xx-utils
 
-# Maxwell / Pascal / Volta (legacy)
-yay -S nvidia-580xx-dkms
+# Fermi — legacy
+yay -S nvidia-390xx-dkms nvidia-390xx-utils
 
-# Kepler (legacy, sin soporte)
-yay -S nvidia-470xx-dkms
-
-# Fermi (legacy)
-yay -S nvidia-390xx-dkms
-
-# Tesla (legacy)
+# Tesla — legacy
 yay -S nvidia-340xx-dkms
 
 # Curie y anterior — open source
 sudo pacman -S xf86-video-nouveau
+```
+
+---
+
+## Paquetes completos para CUDA y aceleración GPU
+
+### Driver + utilidades base
+```bash
+# Con nvidia-open (Blackwell)
+sudo pacman -S nvidia-open nvidia-utils lib32-nvidia-utils nvidia-settings
+
+# Con nvidia-580xx-dkms (Turing → Ada, Maxwell → Volta)
+yay -S nvidia-580xx-dkms nvidia-580xx-utils
+sudo pacman -S nvidia-settings
+```
+
+### CUDA Toolkit
+```bash
+# CUDA completo (compilador nvcc, bibliotecas, cabeceras)
+sudo pacman -S cuda
+
+# Verificar instalación
+nvcc --version
+nvidia-smi
+```
+
+### CUDA — Bibliotecas adicionales
+```bash
+# cuDNN — redes neuronales (TensorFlow, PyTorch)
+sudo pacman -S cudnn
+
+# NCCL — comunicación multi-GPU
+sudo pacman -S nccl
+
+# OpenCL — cómputo paralelo genérico
+sudo pacman -S opencl-nvidia ocl-icd
+
+# 32-bit OpenCL (compatibilidad)
+sudo pacman -S lib32-opencl-nvidia
+
+# clinfo — verificar OpenCL
+sudo pacman -S clinfo
+clinfo
+```
+
+### Herramientas de monitorización y desarrollo
+```bash
+# nvidia-smi — monitorización GPU (incluido en nvidia-utils)
+nvidia-smi
+
+# nvtop — monitor interactivo de GPU en terminal
+sudo pacman -S nvtop
+
+# NVML — biblioteca de gestión (incluida en nvidia-utils)
+
+# Vulkan — renderizado moderno
+sudo pacman -S vulkan-icd-loader lib32-vulkan-icd-loader
+
+# Mesa utils — diagnóstico OpenGL/Vulkan
+sudo pacman -S mesa-utils vulkan-tools
+```
+
+### Machine Learning / Deep Learning
+```bash
+# PyTorch con CUDA (instalar con pip en entorno virtual)
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+
+# TensorFlow con CUDA
+pip install tensorflow[and-cuda]
+
+# JAX con CUDA
+pip install "jax[cuda12]"
+```
+
+### Instalación completa recomendada (Blackwell / Ada / Ampere)
+```bash
+# Driver + utilidades + CUDA + cuDNN + OpenCL + Vulkan
+sudo pacman -S nvidia-open nvidia-utils lib32-nvidia-utils \
+               nvidia-settings cuda cudnn nccl \
+               opencl-nvidia ocl-icd lib32-opencl-nvidia \
+               vulkan-icd-loader lib32-vulkan-icd-loader \
+               nvtop mesa-utils vulkan-tools
 ```
 
 ---
@@ -102,10 +180,10 @@ sudo pacman -S xf86-video-nouveau
 
 ---
 
-## Ada Lovelace (AD) — `nvidia` / `nvidia-open`*
+## Ada Lovelace (AD) — `nvidia-580xx-dkms` (AUR)
 
 > RTX 40xx Series · 2022–2024
-> *nvidia-open funciona pero sin RTD3 Power Management
+> Alternativa: `nvidia-open` (sin RTD3 Power Management)
 
 ### Desktop
 | Modelo | Chip |
@@ -146,10 +224,10 @@ sudo pacman -S xf86-video-nouveau
 
 ---
 
-## Ampere (GA) — `nvidia` / `nvidia-open`*
+## Ampere (GA) — `nvidia-580xx-dkms` (AUR)
 
 > RTX 30xx Series · 2020–2022
-> *nvidia-open puede causar crashes en laptops Ampere
+> Alternativa: `nvidia-open` (posibles cuelgues en laptops)
 
 ### Desktop
 | Modelo | Chip |
@@ -190,7 +268,15 @@ sudo pacman -S xf86-video-nouveau
 
 ---
 
-## Turing (TU) — `nvidia`
+## Turing (TU) / Ampere (GA) / Ada Lovelace (AD) — `nvidia-580xx-dkms` (AUR)
+
+> RTX 40xx / RTX 30xx / RTX 20xx / GTX 16xx · 2018–2024
+> Driver principal: `nvidia-580xx-dkms`
+> Alternativa: `nvidia-open`* (sin RTD3 en Turing, posibles cuelgues en laptops Ampere)
+
+---
+
+## Turing (TU) — `nvidia-580xx-dkms` (AUR)
 
 > RTX 20xx / GTX 16xx Series · 2018–2020
 
@@ -452,28 +538,30 @@ sudo pacman -S xf86-video-nouveau
 
 ## Notas importantes
 
-### nvidia-open en Turing/Ampere
-- En **Turing**: funciona, pero sin RTD3 Power Management
-- En **Ampere laptops**: posibles cuelgues, usar `nvidia` preferiblemente
+### El paquete `nvidia` ya no existe en Arch Linux
+El paquete `nvidia` de los repos oficiales fue reemplazado. La distribución actual es:
+- **Blackwell** → `nvidia-open` (repos oficiales)
+- **Turing → Ada Lovelace** → `nvidia-580xx-dkms` (AUR) como principal
+- **Maxwell → Volta** → `nvidia-580xx-dkms` (AUR) como legacy
 
-### Conflicto de módulos
-Asegúrate de que `nouveau` esté en la lista negra cuando uses el driver propietario:
+### nvidia-open como alternativa en Turing/Ampere
+- En **Turing**: sin RTD3 Power Management (gestión de energía limitada)
+- En **laptops Ampere**: posibles cuelgues, preferir `nvidia-580xx-dkms`
+- En **Ada Lovelace**: funciona bien como alternativa
 
-```bash
-# /etc/modprobe.d/blacklist-nouveau.conf
-blacklist nouveau
-options nouveau modeset=0
-```
-
-### DKMS — Compilación automática con el kernel
-Los paquetes `-dkms` recompilan el módulo automáticamente al actualizar el kernel:
+### Conflicto de módulos — blacklist nouveau
+Obligatorio cuando se usa cualquier driver propietario:
 
 ```bash
-# Verificar que dkms funciona
-dkms status
+# Crear /etc/modprobe.d/blacklist-nouveau.conf
+echo "blacklist nouveau" | sudo tee /etc/modprobe.d/blacklist-nouveau.conf
+echo "options nouveau modeset=0" | sudo tee -a /etc/modprobe.d/blacklist-nouveau.conf
+
+# Regenerar initramfs
+sudo mkinitcpio -P
 ```
 
-### Kernel headers requeridos para -dkms
+### Kernel headers — requeridos para todos los paquetes -dkms
 ```bash
 # linux estándar
 sudo pacman -S linux-headers
@@ -483,4 +571,39 @@ sudo pacman -S linux-lts-headers
 
 # linux-zen
 sudo pacman -S linux-zen-headers
+
+# linux-hardened
+sudo pacman -S linux-hardened-headers
+```
+
+### DKMS — verificar compilación del módulo
+```bash
+# Ver estado de todos los módulos dkms
+dkms status
+
+# Recompilar manualmente si falla
+sudo dkms autoinstall
+```
+
+### Variables de entorno útiles para CUDA
+```bash
+# Añadir a ~/.bashrc o ~/.zshrc
+export CUDA_HOME=/opt/cuda
+export PATH=$CUDA_HOME/bin:$PATH
+export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+```
+
+### Verificar instalación completa
+```bash
+# Ver GPU y driver cargado
+nvidia-smi
+
+# Ver versión CUDA
+nvcc --version
+
+# Ver dispositivos OpenCL
+clinfo | grep "Device Name"
+
+# Ver info Vulkan
+vulkaninfo --summary
 ```
