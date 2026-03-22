@@ -222,7 +222,23 @@ makepkg -fsi
 Estos plugins amplían el soporte de codecs en Linux:
 
 - 🔗 [ffmpeg_encoder_plugin](https://github.com/EdvinNilsson/ffmpeg_encoder_plugin) — Encoder FFMPEG adicional
+```bash
+git clone https://github.com/EdvinNilsson/ffmpeg_encoder_plugin.git
+
+cd ffmpeg_encoder_plugin ; mkdir build ; cd build
+
+cmake .. ; make
+
+mkdir -p /opt/resolve/IOPlugins/ffmpeg_encoder_plugin.dvcp.bundle/Contents/Linux-x86-64/ && \
+  cp -rf ffmpeg_encoder_plugin.dvcp /opt/resolve/IOPlugins/ffmpeg_encoder_plugin.dvcp.bundle/Contents/Linux-x86-64/
+```
+
 - 🔗 [davinci-linux-aac-codec](https://github.com/Toxblh/davinci-linux-aac-codec) — Soporte de codec AAC
+```bash
+sudo pacman -S clang --noconfirm ; git clone https://github.com/Toxblh/davinci-linux-aac-codec.git
+
+cd davinci-linux-aac-codec ; ./build.sh ; sudo ./install.sh 
+```
 
 ---
 
