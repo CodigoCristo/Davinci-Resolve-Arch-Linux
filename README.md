@@ -332,6 +332,7 @@ exit
 ### Resolve no escribe acentos
 
 Xmodmap es una herramienta de X11 que te permite reasignar las teclas del teclado a nivel del servidor gráfico y funciona bien wayland gracias a Xwayland
+Asi que funciona con la tecla = Alt Gr + vocales
 
 ```bash
 cat >> ~/.Xmodmap << 'EOF'
