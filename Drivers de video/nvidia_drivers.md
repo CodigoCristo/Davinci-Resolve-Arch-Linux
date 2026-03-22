@@ -24,21 +24,20 @@ Fuente: [Arch Wiki — NVIDIA](https://wiki.archlinux.org/title/NVIDIA)
 
 ```bash
 # Blackwell — linux estándar
-sudo pacman -S nvidia-open nvidia-utils nvidia-settings
+sudo pacman -S nvidia-open nvidia-utils lib32-nvidia-utils opencl-nvidia nvidia-settings
 
 # Blackwell — linux-lts
-sudo pacman -S nvidia-open-lts nvidia-utils nvidia-settings
+sudo pacman -S nvidia-open-lts nvidia-utils lib32-nvidia-utils opencl-nvidia nvidia-settings
 
 # Blackwell — cualquier kernel (necesita linux-headers)
-sudo pacman -S nvidia-open-dkms nvidia-utils nvidia-settings
+sudo pacman -S nvidia-open-dkms nvidia-utils lib32-nvidia-utils opencl-nvidia nvidia-settings
 ```
 
 ```bash
 # Ada / Ampere / Turing — driver principal
-yay -S nvidia-580xx-dkms nvidia-580xx-utils nvidia-settings
-
 # Maxwell / Pascal / Volta — legacy
 yay -S nvidia-580xx-dkms nvidia-580xx-utils nvidia-settings
+
 ```
 
 ```bash
@@ -77,21 +76,55 @@ sudo pacman -S nvidia-settings
 
 
 
+### Aceleración de vídeo por hardware (VA-API / VDPAU / NVDEC)
+```bash
+# libva-nvidia-driver — VA-API vía CUDA/NVDEC (Fermi y posterior)
+# Necesario para decodificación HW en mpv, Firefox, Chromium
+yay -S libva-nvidia-driver
+
+# Herramientas de verificación
+sudo pacman -S libva-utils   # vainfo — verificar VA-API
+sudo pacman -S vdpauinfo      # verificar VDPAU
+```
+
+> Con driver >= 580.105.08, añadir a `~/.bashrc` / `~/.zshrc`:
+> ```bash
+> export CUDA_DISABLE_PERF_BOOST=1   # evita mayor consumo que CPU con libva-nvidia
+> export LIBVA_DRIVER_NAME=nvidia    # fuerza VA-API a usar el driver Nvidia
+> export VDPAU_DRIVER=nvidia         # fuerza VDPAU a usar el driver Nvidia
+> ```
+
+**Soporte por API según generación:**
+
+| API | Desde |
+|---|---|
+| VDPAU | GeForce 8 y posterior |
+| NVDEC (decodificación HW) | Fermi y posterior |
+| NVENC (codificación HW) | Kepler y posterior |
+| Vulkan Video | Pascal y posterior |
+| AV1 NVDEC | RTX 30xx (Ampere) y posterior |
+| AV1 NVENC | RTX 40xx (Ada Lovelace) y posterior |
+
 ### Herramientas de monitorización y desarrollo
 ```bash
-# nvidia-smi — monitorización GPU (incluido en nvidia-utils)
-nvidia-smi
-
-# nvtop — monitor interactivo de GPU en terminal
+# nvtop — monitor interactivo GPU en terminal
 sudo pacman -S nvtop
 
-# NVML — biblioteca de gestión (incluida en nvidia-utils)
-
-# Vulkan — renderizado moderno
+# Vulkan
 sudo pacman -S vulkan-icd-loader lib32-vulkan-icd-loader
 
 # Mesa utils — diagnóstico OpenGL/Vulkan
-sudo pacman -S mesa-utils vulkan-tools
+sudo pacman -S mesa-utils vulkan-tools 
+```
+
+### Verificar instalación completa
+```bash
+nvidia-smi                          # driver y GPU
+nvcc --version                      # CUDA compiler
+vainfo                              # VA-API (necesita libva-nvidia-driver)
+vdpauinfo                           # VDPAU
+vulkaninfo --summary                # Vulkan
+clinfo | grep "Device Name"         # OpenCL
 ```
 
 ---
