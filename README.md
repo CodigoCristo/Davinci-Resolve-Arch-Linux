@@ -95,7 +95,8 @@ sudo pacman -S opencl-mesa
 
 > Para activar Rusticl en AMD: `RUSTICL_ENABLE=radeonsi /opt/resolve/bin/resolve`
 
-> Si tienes `rocm-opencl-runtime` o `opencl-amd` debes borrar `opencl-mesa`
+
+Si tienes `rocm-opencl-runtime` o `opencl-amd` debes borrar `opencl-mesa`, solo funciona con un paquete de openCL
 
 ---
 
