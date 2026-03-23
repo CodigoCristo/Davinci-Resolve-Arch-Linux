@@ -34,7 +34,14 @@ Fuentes:
 
 ```bash
 # Mesa — driver OpenGL y base de todo lo demás
-sudo pacman -S mesa lib32-mesa
+sudo pacman -S mesa lib32-mesa mesa-utils lib32-mesa-utils
+
+# Firmware del kernel para amdgpu (necesario para cargar correctamente)
+sudo pacman -S linux-firmware-amdgpu
+
+# DDX driver para Xorg (opcional — el modesetting genérico funciona en la mayoría de casos)
+# Puede ser necesario para TearFree o en hardware antiguo GCN 1/2
+sudo pacman -S xf86-video-amdgpu
 ```
 
 ### 2. Vulkan
@@ -99,8 +106,11 @@ sudo pacman -S rocm-hip-runtime rocm-hip-sdk
 ### 4. Aceleración de vídeo por hardware (VA-API)
 
 ```bash
-sudo pacman -S libva-mesa-driver lib32-libva-mesa-driver
-sudo pacman -S libva-utils          # proporciona vainfo
+sudo pacman -S libva lib32-libva                        # biblioteca VA-API base
+sudo pacman -S libva-mesa-driver lib32-libva-mesa-driver # driver VA-API para amdgpu/radeonsi
+sudo pacman -S libva-utils                              # proporciona vainfo
+sudo pacman -S vdpauinfo                                # verificar VDPAU
+sudo pacman -S libvdpau-va-gl                           # capa de traducción VDPAU → VA-API (OpenGL)
 ```
 
 Variable mínima necesaria (añadir a `~/.bashrc` / `~/.zshrc`):
@@ -154,11 +164,17 @@ sudo mkinitcpio -P
 Para GPUs anteriores a GCN (HD 6000 series y más antiguas: HD 5000, HD 4000, R200, R100…) se usa el driver open source `radeon`, no `amdgpu`.
 
 ```bash
-# Instalación base (igual que para amdgpu)
-sudo pacman -S mesa lib32-mesa
+# Instalación base
+sudo pacman -S mesa lib32-mesa mesa-utils lib32-mesa-utils
 
 # GPUs R200 y anteriores (muy antiguas)
 sudo pacman -S mesa-amber lib32-mesa-amber
+
+# Firmware del kernel para el driver radeon
+sudo pacman -S linux-firmware-radeon
+
+# DDX driver Xorg para el driver radeon
+sudo pacman -S xf86-video-ati
 ```
 
 El driver `radeon` carga automáticamente. No necesita configuración adicional.
@@ -209,8 +225,11 @@ glxinfo | grep "OpenGL renderer"
 # Monitor interactivo en terminal (AMD, Intel, NVIDIA)
 sudo pacman -S nvtop
 
-# Monitor detallado específico para AMD
+# Monitor detallado específico para AMD (RDNA/GCN moderno)
 sudo pacman -S amdgpu_top
+
+# Monitor clásico para tarjetas radeon/amdgpu (más ligero)
+sudo pacman -S radeontop
 
 # Herramientas de verificación adicionales
 sudo pacman -S vulkan-tools          # vulkaninfo, vkcube
