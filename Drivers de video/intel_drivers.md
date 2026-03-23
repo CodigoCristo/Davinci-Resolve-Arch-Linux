@@ -192,6 +192,79 @@ glxinfo | grep "OpenGL renderer"
 
 ---
 
+## Gráficos híbridos — Intel + NVIDIA (Optimus)
+
+Los portátiles con gráficos híbridos tienen la iGPU Intel siempre activa y la dGPU NVIDIA encendida solo cuando se necesita. La solución recomendada en Linux es **PRIME** con los drivers open source o el driver propietario NVIDIA.
+
+> Para configuración detallada de NVIDIA Optimus ver `nvidia_drivers.md`. Esta sección cubre solo el contexto Intel.
+
+### Instalar los drivers de ambas GPUs
+
+```bash
+# Lado Intel (iGPU — ver secciones anteriores de esta guía)
+sudo pacman -S mesa lib32-mesa vulkan-intel lib32-vulkan-intel intel-media-driver
+
+# Lado NVIDIA (dGPU — instalar el driver correspondiente)
+# Ejemplo con driver open source (Turing/Ampere/Ada/Blackwell):
+sudo pacman -S nvidia-open nvidia-utils lib32-nvidia-utils
+```
+
+### Ejecutar aplicaciones en la GPU NVIDIA (PRIME offload)
+
+```bash
+# Variable de entorno para forzar la GPU NVIDIA en una aplicación concreta
+__NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia aplicacion
+
+# O para Vulkan
+__NV_PRIME_RENDER_OFFLOAD=1 VK_DRIVER_FILES=/usr/share/vulkan/icd.d/nvidia_icd.json aplicacion
+```
+
+### Apagar la GPU NVIDIA completamente (ahorro de batería)
+
+La GPU discreta se puede apagar para ahorrar batería cuando no se usa. Opciones:
+
+**1. Desde BIOS/UEFI** — algunos fabricantes permiten desactivar la dGPU directamente. Es la opción más limpia.
+
+**2. Con udev rules** — elimina el dispositivo NVIDIA del bus PCI al arrancar:
+
+```bash
+# /etc/modprobe.d/blacklist-nouveau.conf
+blacklist nouveau
+options nouveau modeset=0
+```
+
+```bash
+# /etc/udev/rules.d/00-remove-nvidia.rules
+ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x03[0-9]*", ATTR{power/control}="auto", ATTR{remove}="1"
+ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x0c0330", ATTR{power/control}="auto", ATTR{remove}="1"
+ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x040300", ATTR{power/control}="auto", ATTR{remove}="1"
+```
+
+Reiniciar y verificar con `lspci` que la GPU NVIDIA ya no aparece.
+
+> **Nota:** Si tras desactivar la GPU el consumo sigue alto, comprobar que el módulo `nouveau` está cargado (`lsmod | grep nouveau`). El módulo nouveau gestiona el power management del dispositivo aunque no se use para renderizar.
+
+**3. Con bbswitch** (AUR) — para kernels y hardware más antiguos:
+
+```bash
+yay -S bbswitch-dkms
+```
+
+> `bbswitch` no funciona correctamente con gestión de energía PCIe desde kernel 4.8.
+
+### Problema: arranque de apps retardado 30 segundos (Vulkan)
+
+Si la GPU NVIDIA está desactivada pero `nvidia-utils` está instalado, Vulkan intenta inicializar el driver NVIDIA y falla, causando un timeout de 30 segundos en apps basadas en Chromium/Electron. Solución:
+
+```bash
+# Desactivar el ICD de NVIDIA para Vulkan cuando la GPU está apagada
+export VK_DRIVER_FILES=
+```
+
+Añadir al perfil del shell (`~/.bashrc` / `~/.zshrc`) si la GPU NVIDIA permanece siempre apagada.
+
+---
+
 ## Herramientas de monitorización
 
 ```bash
