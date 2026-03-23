@@ -8,7 +8,7 @@ Fuentes:
 [Vulkan](https://wiki.archlinux.org/title/Vulkan) ·
 [OpenGL](https://wiki.archlinux.org/title/OpenGL) ·
 [Hardware video acceleration](https://wiki.archlinux.org/title/Hardware_video_acceleration) ·
-[GPGPU / OpenCL](https://wiki.archlinux.org/title/General-purpose_computing_on_graphics_processing_units)
+[GPGPU / OpenCL](https://wiki.archlinux.org/title/General-purpose_computing_on_graphics_processing_units#OpenCL)
 
 ---
 
@@ -192,76 +192,201 @@ glxinfo | grep "OpenGL renderer"
 
 ---
 
-## Gráficos híbridos — Intel + NVIDIA (Optimus)
+## Gráficos híbridos — Intel + NVIDIA (Optimus / PRIME)
 
-Los portátiles con gráficos híbridos tienen la iGPU Intel siempre activa y la dGPU NVIDIA encendida solo cuando se necesita. La solución recomendada en Linux es **PRIME** con los drivers open source o el driver propietario NVIDIA.
+Los portátiles con gráficos híbridos tienen la iGPU Intel siempre activa y la dGPU NVIDIA que se enciende solo cuando se necesita. En Linux la solución estándar es **PRIME**.
 
-> Para configuración detallada de NVIDIA Optimus ver `nvidia_drivers.md`. Esta sección cubre solo el contexto Intel.
+> Todos los métodos son mutuamente excluyentes. Si pruebas uno y cambias a otro, revierte los cambios del anterior primero.
 
 ### Instalar los drivers de ambas GPUs
 
 ```bash
-# Lado Intel (iGPU — ver secciones anteriores de esta guía)
-sudo pacman -S mesa lib32-mesa vulkan-intel lib32-vulkan-intel intel-media-driver
+# iGPU Intel (ver secciones anteriores de esta guía)
+sudo pacman -S mesa lib32-mesa vulkan-intel lib32-vulkan-intel intel-media-driver linux-firmware-intel
 
-# Lado NVIDIA (dGPU — instalar el driver correspondiente)
-# Ejemplo con driver open source (Turing/Ampere/Ada/Blackwell):
+# dGPU NVIDIA — instalar el driver correspondiente a tu generación
+# Ver nvidia_drivers.md para elegir el paquete correcto. Ejemplo (Turing/Ampere/Ada):
 sudo pacman -S nvidia-open nvidia-utils lib32-nvidia-utils
+
+# Paquete auxiliar para PRIME offload con driver propietario NVIDIA
+sudo pacman -S nvidia-prime
 ```
 
-### Ejecutar aplicaciones en la GPU NVIDIA (PRIME offload)
+---
 
-```bash
-# Variable de entorno para forzar la GPU NVIDIA en una aplicación concreta
-__NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia aplicacion
+### Opción A — Solo iGPU Intel (máximo ahorro de batería)
 
-# O para Vulkan
-__NV_PRIME_RENDER_OFFLOAD=1 VK_DRIVER_FILES=/usr/share/vulkan/icd.d/nvidia_icd.json aplicacion
+La GPU NVIDIA permanece completamente apagada. Opciones para desactivarla:
+
+**1. BIOS/UEFI** — algunos fabricantes permiten desactivar la dGPU directamente. Es la opción más limpia.
+
+**2. udev rules** — elimina el dispositivo NVIDIA del bus PCI al arrancar:
+
 ```
-
-### Apagar la GPU NVIDIA completamente (ahorro de batería)
-
-La GPU discreta se puede apagar para ahorrar batería cuando no se usa. Opciones:
-
-**1. Desde BIOS/UEFI** — algunos fabricantes permiten desactivar la dGPU directamente. Es la opción más limpia.
-
-**2. Con udev rules** — elimina el dispositivo NVIDIA del bus PCI al arrancar:
-
-```bash
 # /etc/modprobe.d/blacklist-nouveau.conf
 blacklist nouveau
 options nouveau modeset=0
 ```
 
-```bash
+```
 # /etc/udev/rules.d/00-remove-nvidia.rules
 ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x03[0-9]*", ATTR{power/control}="auto", ATTR{remove}="1"
 ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x0c0330", ATTR{power/control}="auto", ATTR{remove}="1"
 ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x040300", ATTR{power/control}="auto", ATTR{remove}="1"
 ```
 
-Reiniciar y verificar con `lspci` que la GPU NVIDIA ya no aparece.
+Reiniciar y verificar con `lspci` que la GPU NVIDIA no aparece.
 
-> **Nota:** Si tras desactivar la GPU el consumo sigue alto, comprobar que el módulo `nouveau` está cargado (`lsmod | grep nouveau`). El módulo nouveau gestiona el power management del dispositivo aunque no se use para renderizar.
+> Si tras desactivarla el consumo sigue alto, comprobar que `nouveau` está cargado: `lsmod | grep nouveau`. Nouveau gestiona el power management del dispositivo aunque no renderice.
 
-**3. Con bbswitch** (AUR) — para kernels y hardware más antiguos:
+---
+
+### Opción B — PRIME offload (recomendado: iGPU por defecto, dGPU bajo demanda)
+
+La iGPU Intel gestiona el display y las apps normales. La dGPU NVIDIA se activa solo para apps que lo necesiten.
+
+#### Con driver propietario NVIDIA (`nvidia-prime`)
 
 ```bash
-yay -S bbswitch-dkms
+# Ejecutar una app en la GPU NVIDIA
+prime-run glxinfo | grep "OpenGL renderer"
+prime-run vulkaninfo
+
+# O manualmente con variables de entorno
+__NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia aplicacion
+
+# En Steam: añadir al launch options del juego
+__NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia %command%
 ```
 
-> `bbswitch` no funciona correctamente con gestión de energía PCIe desde kernel 4.8.
-
-### Problema: arranque de apps retardado 30 segundos (Vulkan)
-
-Si la GPU NVIDIA está desactivada pero `nvidia-utils` está instalado, Vulkan intenta inicializar el driver NVIDIA y falla, causando un timeout de 30 segundos en apps basadas en Chromium/Electron. Solución:
+#### Con drivers open source (AMD dGPU o NVIDIA con nouveau)
 
 ```bash
-# Desactivar el ICD de NVIDIA para Vulkan cuando la GPU está apagada
+# DRI_PRIME=1 usa la GPU secundaria (discreta)
+DRI_PRIME=1 glxinfo | grep "OpenGL renderer"
+DRI_PRIME=1 aplicacion
+
+# Para Vulkan también instalar:
+sudo pacman -S vulkan-mesa-layers lib32-vulkan-mesa-layers
+DRI_PRIME=1! vulkaninfo   # ! expone solo esa GPU a la app
+
+# Juegos Windows con DXVK (Wine/Proton)
+DXVK_FILTER_DEVICE_NAME="nombre de tu GPU" aplicacion
+# Obtener el nombre exacto con: vulkaninfo | grep "deviceName"
+```
+
+#### Integración con entorno de escritorio (switcheroo-control)
+
+```bash
+sudo pacman -S switcheroo-control
+sudo systemctl enable --now switcheroo-control.service
+```
+
+Con el servicio activo, GNOME, KDE Plasma, Cinnamon y Budgie permiten lanzar apps en la GPU dedicada desde el menú contextual del icono (clic derecho → "Ejecutar con GPU dedicada"). También respeta la clave `PrefersNonDefaultGPU=true` en archivos `.desktop`.
+
+#### RTD3 — apagar la dGPU NVIDIA automáticamente cuando no se usa
+
+Para Turing (RTX 20xx) y posterior con CPU Intel Coffee Lake o superior:
+
+```
+# /etc/udev/rules.d/80-nvidia-pm.rules
+ACTION=="bind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030000", TEST=="power/control", ATTR{power/control}="auto"
+ACTION=="bind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030200", TEST=="power/control", ATTR{power/control}="auto"
+ACTION=="unbind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030000", TEST=="power/control", ATTR{power/control}="on"
+ACTION=="unbind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030200", TEST=="power/control", ATTR{power/control}="on"
+```
+
+```
+# /etc/modprobe.d/nvidia-pm.conf
+options nvidia NVreg_DynamicPowerManagement=0x02
+# Para Ampere y posterior usar: NVreg_DynamicPowerManagement=0x03
+```
+
+Verificar estado de la GPU (suspended = apagada, 0W):
+
+```bash
+cat /sys/bus/pci/devices/0000:01:00.0/power/runtime_status
+```
+
+---
+
+### Opción C — Solo dGPU NVIDIA (máximo rendimiento, más consumo)
+
+Usar la GPU NVIDIA para todo el renderizado, incluyendo el display:
+
+```
+# /etc/X11/xorg.conf.d/10-nvidia-drm-outputclass.conf
+Section "OutputClass"
+    Identifier "intel"
+    MatchDriver "i915"
+    Driver "modesetting"
+EndSection
+
+Section "OutputClass"
+    Identifier "nvidia"
+    MatchDriver "nvidia-drm"
+    Driver "nvidia"
+    Option "AllowEmptyInitialConfiguration"
+    Option "PrimaryGPU" "yes"
+    ModulePath "/usr/lib/nvidia/xorg"
+    ModulePath "/usr/lib/xorg/modules"
+EndSection
+```
+
+Añadir al inicio de `~/.xinitrc` (o script de display manager):
+
+```bash
+xrandr --setprovideroutputsource modesetting NVIDIA-0
+xrandr --auto
+```
+
+> Requiere DRM kernel mode setting activo en NVIDIA. Ver `nvidia_drivers.md`.
+
+---
+
+### Herramientas de gestión alternativas (AUR)
+
+| Herramienta | Descripción |
+|---|---|
+| `optimus-manager` (AUR) | Cambia entre modos con un comando (requiere re-login). Soporta AMD+NVIDIA desde v1.4 |
+| `envycontrol` (AUR) | Similar a optimus-manager, sin daemon ni configuración de GDM parcheado |
+| `nvidia-xrun` (AUR) | Sesión X separada en otro TTY con GPU NVIDIA |
+
+---
+
+### Problemas comunes
+
+**Apps tardan 30 segundos en abrir (Vulkan con dGPU apagada)**
+
+Cuando la GPU NVIDIA está suspendida (RTD3), Vulkan intenta inicializarla y falla con timeout. Solución para Wayland:
+
+```
+# /etc/environment
+__EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/50_mesa.json
+VK_DRIVER_FILES=/usr/share/vulkan/icd.d/intel_icd.json
+__GLX_VENDOR_LIBRARY_NAME=mesa
+```
+
+O simplemente vaciar `VK_DRIVER_FILES` si la NVIDIA permanece siempre apagada:
+
+```bash
 export VK_DRIVER_FILES=
 ```
 
-Añadir al perfil del shell (`~/.bashrc` / `~/.zshrc`) si la GPU NVIDIA permanece siempre apagada.
+**Tearing en el display**
+
+Activar DRM kernel mode setting de NVIDIA (habilita PRIME sync automáticamente):
+
+```bash
+# Añadir a parámetros del kernel:
+nvidia-drm.modeset=1
+```
+
+**Verificar qué GPU usa una app**
+
+```bash
+lsof +c0 /dev/nvidia*    # procesos usando GPU NVIDIA (no la despierta)
+```
 
 ---
 
