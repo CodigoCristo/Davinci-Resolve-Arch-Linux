@@ -275,16 +275,27 @@ ffmpeg -i input.mp4 -c:v dnxhd -profile:v dnxhr_lb -pix_fmt yuv422p -c:a alac ou
 ## 🔧 Solución de problemas comunes
 
 ### No abre / crash al iniciar — error de libglib
+Eliminar o mover las librerías internas de Resolve que conflictúan con las del sistema:
 
 ```bash
-# Eliminar o mover las librerías internas de Resolve que conflictúan con las del sistema:
 sudo rm /opt/resolve/libs/libglib-2.0.so* ; sudo rm /opt/resolve/libs/libgio-2.0.so* ; sudo rm /opt/resolve/libs/libgmodule-2.0.so*
 ```
-
+O forzar uso de las librerías del sistema al lanzar:
 ```bash
-# O forzar uso de las librerías del sistema al lanzar:
 LD_PRELOAD="/usr/lib/libglib-2.0.so /usr/lib/libgio-2.0.so /usr/lib/libgmodule-2.0.so" /opt/resolve/bin/resolve
 ```
+
+### Resolve se bloquea en fusion 
+
+Lo solución fue muy sencilla fue agregar el idioma Ingles al locale
+Fuente :[https://youtu.be/5Mo-GaBIpT4?si=oSeBf7WDO-CZTjI6](https://youtu.be/5Mo-GaBIpT4?si=oSeBf7WDO-CZTjI6)
+
+```bash
+sudo su
+echo en_US.UTF-8 UTF-8 >> /etc/locale.gen ; locale-gen
+exit
+```
+
 
 ### No abre en Wayland
 
@@ -315,17 +326,6 @@ yay -S pulse pulseaudio-alsa
 sudo su
 echo 'pcm.!default pulse' > /etc/asound.conf
 echo 'ctl.!default pulse' >> /etc/asound.conf
-exit
-```
-
-### Resolve se bloquea al poner acentos 
-
-Lo solución fue muy sencilla fue agregar el idioma Ingles al locale
-Fuente :[https://youtu.be/5Mo-GaBIpT4?si=oSeBf7WDO-CZTjI6](https://youtu.be/5Mo-GaBIpT4?si=oSeBf7WDO-CZTjI6)
-
-```bash
-sudo su
-echo en_US.UTF-8 UTF-8 >> /etc/locale.gen ; locale-gen
 exit
 ```
 
