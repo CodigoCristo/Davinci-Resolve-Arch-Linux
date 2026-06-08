@@ -138,7 +138,7 @@ sudo pacman -S libva lib32-libva libva-utils vdpauinfo libvdpau-va-gl
 
 ```bash
 sudo pacman -S mesa lib32-mesa mesa-utils lib32-mesa-utils linux-firmware-intel 
-yay -S intel-compute-runtime-legacy vulkan-intel lib32-vulkan-intel intel-media-driver vulkan-icd-loader lib32-vulkan-icd-loader vulkan-intel lib32-vulkan-intel
+yay -S intel-compute-runtime-legacy-bin vulkan-intel lib32-vulkan-intel intel-media-driver vulkan-icd-loader lib32-vulkan-icd-loader vulkan-intel lib32-vulkan-intel
 sudo pacman -S libva lib32-libva libva-utils vdpauinfo libvdpau-va-gl 
 ```
 
