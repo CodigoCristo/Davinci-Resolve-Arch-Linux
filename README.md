@@ -377,9 +377,9 @@ sudo ln -s /etc/ssl /etc/pki/tls
 sudo chmod -R 7777 /opt/resolve/.license/
 ```
 
-## 📚 Davinci Resolve Studio Full
+## 📚 Davinci Resolve Studio 21 Full 
 
-- [https://pastebin.com/raw/vMwatbqi](https://pastebin.com/raw/vMwatbqi)
+- [https://pastebin.com/raw/vMwatbqi](https://pastebin.com/raw/Rgx2aV6u)
 
 ---
 
