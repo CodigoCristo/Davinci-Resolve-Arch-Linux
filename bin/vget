@@ -1,726 +1,931 @@
 #!/bin/bash
 
 # ====================================================================
-# VGet Descargador de Videos - Basado en yt-dlp
-# hay otro para descargar fotos llamado https://github.com/mikf/gallery-dl
+# vget.sh — Descargador de videos (migrado desde vget.ps1)
+# Requiere: yt-dlp y ffmpeg en el PATH
 # ====================================================================
 
 set -euo pipefail
 
-# Colores
+# ── Colores ──────────────────────────────────────────────────────────
 R='\033[0;31m'
 G='\033[0;32m'
 Y='\033[1;33m'
-B='\033[0;34m'
 C='\033[0;36m'
 M='\033[0;35m'
 W='\033[1;37m'
 DIM='\033[2m'
 NC='\033[0m'
 
-linea() { echo -e "${DIM}${B}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"; }
-ok()    { echo -e "${G}✔  $1${NC}"; }
-info()  { echo -e "${C}ℹ  $1${NC}"; }
-warn()  { echo -e "${Y}⚠  $1${NC}"; }
-err()   { echo -e "${R}✘  $1${NC}"; }
+# ── Helpers de salida ─────────────────────────────────────────────────
+sep()  { echo -e "${DIM}============================================${NC}"; }
+ok()   { echo -e "${G}  [OK]  $1${NC}"; }
+info() { echo -e "${C}  $1${NC}"; }
+warn() { echo -e "${Y}  [!]  $1${NC}"; }
+err()  { echo -e "${R}  [X]  $1${NC}"; }
 
-# Lista de archivos descargados en Instagram (para convert_video)
-_DL_FILES=()
+# ── Caja de menú ─────────────────────────────────────────────────────
+# Ancho interior visible (sin los bordes ║): 42 columnas
+BOX_W=42
 
-# Caja: ancho interior = 64 (total visible = 66 con bordes)
-_BI=64
-box_top() { printf "${B}┏"; printf '━%.0s' {1..64}; printf "┓${NC}\n"; }
-box_bot() { printf "${B}┗"; printf '━%.0s' {1..64}; printf "┛${NC}\n"; }
-box_sep() { printf "${B}┣"; printf '━%.0s' {1..64}; printf "┫${NC}\n"; }
-# brow <texto_plano> <texto_coloreado> [ajuste_ancho_extra]
-brow() {
-    local plain="$1" colored="${2:-$1}" xtra="${3:-0}"
-    local pad=$(( _BI - ${#plain} - xtra - 2 ))
-    local spaces; spaces=$(printf '%*s' "$pad" '')
-    echo -e "${B}┃${NC} ${colored}${spaces} ${B}┃${NC}"
+_rep() { local s=""; local i; for ((i=0;i<$1;i++)); do s+="$2"; done; printf '%s' "$s"; }
+
+box_top() { printf "${C}╔$(_rep $BOX_W '═')╗${NC}\n"; }
+box_mid() { printf "${C}╠$(_rep $BOX_W '═')╣${NC}\n"; }
+box_bot() { printf "${C}╚$(_rep $BOX_W '═')╝${NC}\n"; }
+
+# brow_title: titulo centrado dentro de la caja
+brow_title() {
+    local text="$1"
+    local tlen=${#text}
+    local lpad=$(( (BOX_W - tlen) / 2 ))
+    local rpad=$(( BOX_W - tlen - lpad ))
+    [[ $lpad -lt 0 ]] && lpad=0
+    [[ $rpad -lt 0 ]] && rpad=0
+    printf "${C}║${NC}${W}%*s%s%*s${NC}${C}║${NC}\n" "$lpad" "" "$text" "$rpad" ""
 }
 
-menu_principal() {
-    clear
-    box_top
-    brow "  VGet Descargador de Videos  " "  ${W}VGet Descargador de Videos${NC}  "
-    brow "  Basado en yt-dlp            " "  ${DIM}Basado en yt-dlp${NC}            "
-    box_sep
-    brow "  1. ▶  YouTube"   "  ${W}1.${NC} ${R}▶${NC}  YouTube"
-    brow "  2. ♪  TikTok"    "  ${W}2.${NC} ${W}♪${NC}  TikTok"
-    brow "  3. f  Facebook"  "  ${W}3.${NC} ${B}f${NC}  Facebook"
-    brow "  4.    Instagram" "  ${W}4.${NC} ${M}📷${NC}  Instagram" 1
-    brow "  5. ✖  Salir"     "  ${W}5.${NC} ${R}✖${NC}  Salir"
-    box_bot
-    echo -ne "${Y}  ➜  Selecciona una opcion (1-5): ${NC}"
-    read -r opcion
+# brow_sub <color> <texto>: linea centrada con color secundario
+brow_sub() {
+    local nc="$1" text="$2"
+    local tlen=${#text}
+    local lpad=$(( (BOX_W - tlen) / 2 ))
+    local rpad=$(( BOX_W - tlen - lpad ))
+    [[ $lpad -lt 0 ]] && lpad=0
+    [[ $rpad -lt 0 ]] && rpad=0
+    printf "${C}║${NC}${nc}%*s%s%*s${NC}${C}║${NC}\n" "$lpad" "" "$text" "$rpad" ""
+}
 
-    case "$opcion" in
-        1) descargar_youtube ;;
-        2) descargar "TikTok"    "${W}♪  TikTok${NC}"    ;;
-        3) descargar_facebook ;;
-        4) descargar_instagram ;;
-        5) salir ;;
-        *) menu_principal ;;
-    esac
+# Layout: ║  N)  texto...padding  ║
+brow_item() {
+    local nc="$1" num="$2" txt="$3"
+    # Longitud visible del prefijo: "  N)  "
+    local numlen=${#num}
+    local prefixlen=$(( 2 + numlen + 1 + 2 ))   # "  " + num + ")" + "  "
+    local txtlen=${#txt}
+    local pad=$(( BOX_W - prefixlen - txtlen - 2 ))  # 2 = margen derecho "  "
+    [[ $pad -lt 0 ]] && pad=0
+    printf "${C}║${NC}  ${nc}${num})${NC}  %s%*s  ${C}║${NC}\n" "$txt" "$pad" ""
+}
+
+# ── Limpiar título para nombre de archivo ────────────────────────────
+limpiar_titulo() {
+    local titulo="$1"
+    local maxlen="${2:-25}"
+
+    # Transliterar acentos y caracteres especiales
+    titulo=$(echo "$titulo" | sed \
+        -e 's/[áàâäãå]/a/g' -e 's/[ÁÀÂÄÃÅ]/A/g' \
+        -e 's/[éèêë]/e/g'   -e 's/[ÉÈÊË]/E/g' \
+        -e 's/[íìîï]/i/g'   -e 's/[ÍÌÎÏ]/I/g' \
+        -e 's/[óòôöõø]/o/g' -e 's/[ÓÒÔÖÕØ]/O/g' \
+        -e 's/[úùûü]/u/g'   -e 's/[ÚÙÛÜ]/U/g' \
+        -e 's/[ñ]/n/g'      -e 's/[Ñ]/N/g' \
+        -e 's/[ç]/c/g'      -e 's/[Ç]/C/g' \
+        -e 's/[ý]/y/g'      -e 's/[Ý]/Y/g')
+
+    # Eliminar no-ASCII (emojis, símbolos raros)
+    titulo=$(echo "$titulo" | LC_ALL=C sed 's/[^[:print:]]//g' | \
+             tr -dc '[:alnum:][:space:]_.,!()-')
+
+    # Eliminar caracteres inválidos en nombres de archivo
+    titulo=$(echo "$titulo" | sed 's/[\/:\\*?"<>|#@]//g')
+
+    # Espacios y guiones bajos múltiples -> uno solo
+    titulo=$(echo "$titulo" | sed 's/[[:space:]_]\+/_/g')
+
+    # Quitar guiones bajos al inicio y final
+    titulo=$(echo "$titulo" | sed 's/^_//;s/_$//')
+
+    [[ -z "$titulo" ]] && titulo="video"
+
+    # Truncar
+    titulo="${titulo:0:$maxlen}"
+    titulo="${titulo%_}"
+
+    echo "$titulo"
+}
+
+# ── Actualizar yt-dlp ─────────────────────────────────────────────────
+actualizar_ytdlp() {
+    clear
+    echo
+    box_top
+    brow_title "       ACTUALIZANDO YT-DLP"
+    box_bot
+    echo
+    info "Buscando actualizaciones..."
+    echo
+
+    local output
+    output=$(yt-dlp -U 2>&1 || true)
+
+    if echo "$output" | grep -qi "up.to.date"; then
+        ok "yt-dlp ya esta en la version mas reciente"
+    elif echo "$output" | grep -qi "updated"; then
+        ok "yt-dlp actualizado correctamente!"
+    else
+        warn "No se pudo verificar la actualizacion"
+    fi
+
+    sleep 1
+    clear
+}
+
+# ── Menú principal ────────────────────────────────────────────────────
+show_header() {
+    clear
+    echo
+    box_top
+    brow_title "   VGET - Video Get"
+    brow_sub "$DIM" "Autor: Codigo Cristo"
+    brow_sub "$DIM" "youtube.com/@CodeCristo"
+    box_mid
+    brow_item "$M" "1" "Descargar videos de TikTok"
+    brow_item "$M" "2" "Descargar videos de YouTube"
+    brow_item "$M" "3" "Descargar videos de Facebook"
+    brow_item "$R" "0" "Salir"
+    box_bot
+    echo
 }
 
 # ====================================================================
-# YouTube — descarga avanzada con selección de resolución y codec
+# TIKTOK
+# ====================================================================
+descargar_tiktok() {
+    clear
+    echo
+    box_top
+    brow_title "        TIKTOK DOWNLOADER"
+    box_mid
+    brow_item "$M" "1" "Descargar video (MP4)"
+    brow_item "$M" "2" "Descargar solo audio (MP3)"
+    brow_item "$R" "0" "Volver al menu"
+    box_bot
+    echo
+    echo -en "${Y}  Elige una opcion: ${NC}"
+    read -r modo_tiktok
+
+    if [[ "$modo_tiktok" == "0" ]]; then
+        info "Volviendo al menu..."
+        sleep 1
+        return
+    fi
+
+    if [[ "$modo_tiktok" != "1" && "$modo_tiktok" != "2" ]]; then
+        err "Opcion invalida."
+        sleep 1
+        return
+    fi
+
+    echo
+    info "Pega la URL del video de TikTok"
+    echo -en "${Y}  URL: ${NC}"
+    read -r url
+
+    # Limpiar parámetros de la URL
+    local url_limpia
+    url_limpia="${url%%\?*}"
+
+    # Detectar slideshow (photo) y convertir a video
+    local es_photo=false
+    if echo "$url_limpia" | grep -q "/photo/"; then
+        es_photo=true
+        url_limpia="${url_limpia/\/photo\///video/}"
+    fi
+
+    echo
+    sep
+    echo -en "${G}  [OK] URL limpia: ${NC}"
+    echo -e "${W}$url_limpia${NC}"
+    sep
+    echo
+
+    # Obtener título limpio
+    local titulo_raw titulo_limpio
+    titulo_raw=$(yt-dlp --get-title "$url_limpia" 2>/dev/null || echo "video")
+    titulo_limpio=$(limpiar_titulo "$titulo_raw" 25)
+
+    # ── Modo MP3 ──────────────────────────────────────────────────────
+    if [[ "$modo_tiktok" == "2" || "$es_photo" == "true" ]]; then
+        if [[ "$es_photo" == "true" ]]; then
+            warn "Slideshow detectado -> descargando solo audio (MP3)..."
+        else
+            info "Extrayendo audio en MP3..."
+        fi
+        echo
+        yt-dlp -x --audio-format mp3 --audio-quality 0 \
+               --output "${titulo_limpio}.%(ext)s" "$url_limpia"
+        echo
+        sep
+        ok "Descarga completada exitosamente!"
+        echo -e "  Archivo: ${W}${titulo_limpio}.mp3${NC}"
+        sep
+        echo
+        echo -en "${DIM}  Presiona Enter para volver al menu${NC}"
+        read -r
+        return
+    fi
+
+    # ── Modo VIDEO ────────────────────────────────────────────────────
+    info "Analizando formatos disponibles..."
+    echo
+
+    local formatos_raw
+    formatos_raw=$(yt-dlp -F "$url_limpia" 2>/dev/null || true)
+
+    # Buscar mejor formato: primero bytevc1, si no el último disponible
+    local formato
+    formato=$(echo "$formatos_raw" | grep "bytevc1" | tail -1 | awk '{print $1}')
+
+    if [[ -z "$formato" ]]; then
+        formato=$(echo "$formatos_raw" | grep -v "^\s*ID\s" | \
+                  grep -v "^-\{3\}" | grep -v "^download" | \
+                  grep '\S' | tail -1 | awk '{print $1}')
+    fi
+
+    if [[ -z "$formato" ]]; then
+        err "No se encontro ningun formato de video."
+        info "Verifica que la URL sea correcta."
+        echo
+        echo -en "${DIM}  Presiona Enter para volver${NC}"
+        read -r
+        return
+    fi
+
+    sep
+    echo -en "${G}  [OK] Mejor formato: ${NC}"
+    echo -e "${M}${formato}${NC}"
+    sep
+    echo
+    info "Iniciando descarga..."
+    echo
+
+    # Descargar en archivo temporal
+    local tmp_name="tiktok_tmp_dl"
+    yt-dlp -f "$formato" --output "${tmp_name}.%(ext)s" "$url_limpia"
+
+    # Detectar extensión del archivo descargado
+    local archivo_tmp ext_real=""
+    archivo_tmp=""
+    for ext in mp4 webm mkv mov avi; do
+        if [[ -f "${tmp_name}.${ext}" ]]; then
+            archivo_tmp="${tmp_name}.${ext}"
+            ext_real="$ext"
+            break
+        fi
+    done
+
+    echo
+    sep
+    ok "Descarga completada exitosamente!"
+    sep
+    echo
+
+    if [[ -z "$archivo_tmp" ]]; then
+        echo -en "${DIM}  Presiona Enter para volver al menu${NC}"
+        read -r
+        return
+    fi
+
+    # ── Preguntar conversión para DaVinci Resolve ─────────────────────
+    _menu_conversion_tiktok "$archivo_tmp" "$ext_real" "$titulo_limpio"
+}
+
+# Submenú de conversión (reutilizable para TikTok y Facebook)
+_menu_conversion_davinci() {
+    local archivo_tmp="$1"
+    local ext_real="$2"
+    local titulo="$3"
+
+    box_top
+    brow_title "  CONVERTIR PARA DAVINCI RESOLVE"
+    box_bot
+    echo
+    echo -e "  Titulo: ${M}${titulo}${NC}"
+    echo
+    echo -e "  ${G}S)${NC}  Convertir  ->  [nombre]_convert.mp4 (audio PCM) y borrar original"
+    echo -e "  ${R}N)${NC}  No convertir, guardar original con nombre del video"
+    echo
+    echo -en "${Y}  Elige una opcion [S/N]: ${NC}"
+    read -r conv
+
+    if [[ "$conv" =~ ^[sS]$ ]]; then
+        local out_final="${titulo}_convert.mp4"
+        echo
+        info "Convirtiendo a MP4 con audio PCM..."
+        echo
+        ffmpeg -i "$archivo_tmp" -c:v copy -c:a pcm_s16le "$out_final" -y
+        rm -f "$archivo_tmp"
+        echo
+        sep
+        ok "Conversion completada!"
+        sep
+        echo
+        echo -e "  Archivo final: ${W}${out_final}${NC}"
+    else
+        local out_final="${titulo}.${ext_real}"
+        mv "$archivo_tmp" "$out_final"
+        echo
+        sep
+        ok "Archivo guardado como:"
+        echo -e "  ${W}${out_final}${NC}"
+        sep
+    fi
+
+    echo
+    echo -en "${DIM}  Presiona Enter para volver al menu${NC}"
+    read -r
+}
+
+_menu_conversion_tiktok() {
+    _menu_conversion_davinci "$1" "$2" "$3"
+}
+
+# ====================================================================
+# YOUTUBE
 # ====================================================================
 descargar_youtube() {
     clear
-    linea
-    echo -e "  ${R}▶${NC}  ${W}YouTube${NC} — Seleccion de calidad"
-    linea
     echo
-    echo -ne "${Y}  🔗  Pega la URL del video: ${NC}"
+    box_top
+    brow_title "       YOUTUBE DOWNLOADER"
+    box_bot
+    echo
+    info "Pega la URL del video de YouTube"
+    echo -en "${Y}  URL: ${NC}"
     read -r url
 
-    if [[ -z "$url" ]]; then
-        err "No has ingresado ninguna URL"
-        echo -ne "${DIM}  Presiona Enter...${NC}"; read -r
-        menu_principal; return
-    fi
-
-    # Extraer solo ?v=ID, eliminar &list= &index= y otros parametros
-    if [[ "$url" == *"v="* ]]; then
+    # Limpiar parámetros extra (&list=, &index=, etc.)
+    local url_limpia
+    if echo "$url" | grep -qE 'youtube\.com/shorts/'; then
+        # YouTube Shorts: extraer ID y convertir a URL normal
+        local vid="${url#*/shorts/}"
+        vid="${vid%%\?*}"
+        vid="${vid%%\&*}"
+        vid="${vid%%\#*}"
+        url_limpia="https://www.youtube.com/shorts/${vid}"
+    elif echo "$url" | grep -q "v="; then
         local vid="${url#*v=}"
         vid="${vid%%&*}"
         vid="${vid%%\?*}"
         vid="${vid%%\#*}"
-        url="https://www.youtube.com/watch?v=${vid}"
+        url_limpia="https://www.youtube.com/watch?v=${vid}"
+    elif echo "$url" | grep -q "youtu.be/"; then
+        local vid="${url#*youtu.be/}"
+        vid="${vid%%\?*}"
+        vid="${vid%%\&*}"
+        vid="${vid%%\#*}"
+        url_limpia="https://www.youtube.com/watch?v=${vid}"
     else
-        url="${url%%\#*}"
-    fi
-    echo
-    info "Obteniendo formatos disponibles..."
-    linea
-
-    local tmp; tmp=$(mktemp /tmp/vget_yt.XXXXXX)
-    yt-dlp -F "$url" 2>&1 | tee "$tmp"
-
-    # Etiquetas por altura de resolución
-    declare -A res_names=(
-        [4320]="8K   (4320p)"
-        [2160]="4K   (2160p)"
-        [1440]="2K   (1440p)"
-        [1080]="1080p"
-        [720]="720p"
-        [480]="480p"
-        [360]="360p"
-        [240]="240p"
-        [144]="144p"
-    )
-
-    # Parsear líneas mp4_dash video-only
-    # (sin depender del separador │ vs | según terminal)
-    declare -a heights_order=()
-    declare -A heights_seen=()
-    declare -A height_fmts=()
-
-    while IFS= read -r line; do
-        [[ "$line" != *"mp4_dash"* ]] && [[ "$line" != *"webm_dash"* ]] && continue
-        [[ "$line" != *"video only"* ]] && continue
-
-        local fmt_id resolution fps height codec_key codec_label container
-
-        fmt_id=$(awk '{print $1}' <<< "$line")
-        [[ -z "$fmt_id" ]] && continue
-
-        # Resolución: primer patrón NxM de la línea
-        resolution=$(grep -oP '\d+x\d+' <<< "$line" | head -1 || true)
-        [[ -z "$resolution" ]] && continue
-
-        # FPS: campo inmediatamente después de la resolución
-        fps=$(awk -v r="$resolution" '{for(i=1;i<=NF;i++) if($i==r){print $(i+1); exit}}' <<< "$line")
-
-        height="${resolution#*x}"
-        [[ -z "$height" ]] && continue
-        [[ -z "${res_names[$height]+x}" ]] && continue
-
-        # Codec: avc1 / av01 (mp4_dash)  o  vp9 / vp9.2 (webm_dash)
-        local codec_key codec_label container
-        if grep -qP '\bavc1\.' <<< "$line"; then
-            codec_key="h264"; codec_label="H.264 (AVC) SDR"; container="mp4"
-        elif grep -qP '\bav01\.' <<< "$line"; then
-            if [[ "$line" == *"HDR"* ]]; then
-                codec_key="av1_hdr"; codec_label="AV1 HDR (10-bit)"
-            else
-                codec_key="av1_sdr"; codec_label="AV1 SDR"
-            fi
-            container="mp4"
-        elif grep -qP '\bvp9\.2\b' <<< "$line"; then
-            codec_key="vp9_hdr"; codec_label="VP9 HDR (10-bit)"; container="mkv"
-        elif grep -qP '\bvp9\b' <<< "$line"; then
-            codec_key="vp9"; codec_label="VP9 SDR"; container="mkv"
-        else
-            continue
-        fi
-
-        if [[ -z "${heights_seen[$height]+x}" ]]; then
-            heights_order+=("$height")
-            heights_seen[$height]=1
-            height_fmts[$height]=""
-        fi
-        height_fmts[$height]+="${fmt_id}|${fps}|${codec_label}|${codec_key}|${container}"$'\n'
-    done < "$tmp"
-    rm -f "$tmp"
-
-    # Ordenar resoluciones descendente (mayor calidad primero)
-    mapfile -t heights_order < <(printf '%s\n' "${heights_order[@]}" | sort -rn)
-
-    if [[ ${#heights_order[@]} -eq 0 ]]; then
-        echo; err "No se encontraron formatos mp4_dash disponibles"
-        echo -ne "${DIM}  Presiona Enter...${NC}"; read -r
-        menu_principal; return
-    fi
-
-    # ── Menú de formatos ────────────────────────────────────────────
-    echo
-    linea
-    echo -e "${W}  Formatos disponibles:${NC}"
-    linea
-
-    local i=1
-    for h in "${heights_order[@]}"; do
-        local icono="${G}●${NC}"
-        (( h >= 2160 )) && icono="${M}★${NC}"
-        (( h >= 4320 )) && icono="${Y}★${NC}"
-        echo -e "  ${W}${i}.${NC} ${icono}  ${res_names[$h]}"
-        ((i++))
-    done
-    local i_mp3=$i; ((i++))
-    local i_wav=$i; ((i++))
-    local i_cancel=$i
-    echo -e "  ${W}${i_mp3}.${NC} ${M}♪${NC}  MP3 — audio only  ${DIM}16bit / 44.1kHz${NC}"
-    echo -e "  ${W}${i_wav}.${NC} ${C}♪${NC}  WAV — audio only  ${DIM}24bit / 48kHz${NC}"
-    echo -e "  ${W}${i_cancel}.${NC} ${R}✖${NC}  Cancelar"
-    linea
-    while true; do
-        echo -ne "${Y}  ➜  Opcion: ${NC}"
-        read -r res_choice
-
-        if [[ "$res_choice" == "$i_cancel" ]] || [[ -z "$res_choice" ]]; then
-            menu_principal; return
-        fi
-
-        # Opcion MP3
-        if [[ "$res_choice" == "$i_mp3" ]]; then
-            echo; linea
-            info "Descargando audio 140 (m4a) y convirtiendo a MP3..."
-            linea
-            if yt-dlp -f 140 --restrict-filenames --output "%(title).50s.m4a" "$url"; then
-                local m4a_file; m4a_file=$(ls -t ./*.m4a 2>/dev/null | head -n1 || true)
-                if [[ -n "$m4a_file" ]]; then
-                    local mp3_file="${m4a_file%.m4a}.mp3"
-                    if ffmpeg -i "$m4a_file" -c:a libmp3lame -ar 44100 -sample_fmt s16p -y "$mp3_file"; then
-                        rm -f "$m4a_file"
-                        echo; ok "Guardado: ${W}$mp3_file${NC} ✅"
-                    else
-                        err "Error convirtiendo a MP3"
-                    fi
-                fi
-            else
-                err "Error descargando audio"
-            fi
-            linea
-            echo -ne "${DIM}  Presiona Enter...${NC}"; read -r
-            menu_principal; return
-        fi
-
-        # Opcion WAV
-        if [[ "$res_choice" == "$i_wav" ]]; then
-            echo; linea
-            info "Descargando audio 140 (m4a) y convirtiendo a WAV..."
-            linea
-            if yt-dlp -f 140 --restrict-filenames --output "%(title).50s.m4a" "$url"; then
-                local m4a_file; m4a_file=$(ls -t ./*.m4a 2>/dev/null | head -n1 || true)
-                if [[ -n "$m4a_file" ]]; then
-                    local wav_file="${m4a_file%.m4a}.wav"
-                    if ffmpeg -i "$m4a_file" -c:a pcm_s24le -ar 48000 -y "$wav_file"; then
-                        rm -f "$m4a_file"
-                        echo; ok "Guardado: ${W}$wav_file${NC} ✅"
-                    else
-                        err "Error convirtiendo a WAV"
-                    fi
-                fi
-            else
-                err "Error descargando audio"
-            fi
-            linea
-            echo -ne "${DIM}  Presiona Enter...${NC}"; read -r
-            menu_principal; return
-        fi
-
-        if ! [[ "$res_choice" =~ ^[0-9]+$ ]] || (( res_choice < 1 || res_choice >= i_mp3 )); then
-            warn "Opcion invalida"
-            continue
-        fi
-
-        break
-    done
-
-    local sel_height="${heights_order[$((res_choice - 1))]}"
-
-    # Parsear variantes para la resolución elegida
-    mapfile -t fmt_lines < <(printf '%s' "${height_fmts[$sel_height]}" | grep -v '^$')
-
-    # ── Menú de codec / fps ─────────────────────────────────────────
-    echo
-    linea
-    echo -e "${W}  ${res_names[$sel_height]} — Selecciona variante:${NC}"
-    linea
-
-    local j=1
-    declare -a sel_fmt_ids=()
-    for fline in "${fmt_lines[@]}"; do
-        local fid fps_val clabel ckey cont
-        IFS='|' read -r fid fps_val clabel ckey cont <<< "$fline"
-
-        local codec_icono="${C}🎬${NC}"
-        [[ "$ckey" == "av1_hdr" || "$ckey" == "vp9_hdr" ]] && codec_icono="${Y}✨${NC}"
-
-        echo -e "  ${W}${j}.${NC} ${codec_icono}  ${clabel}  ${DIM}${fps_val}fps | ${cont}${NC}"
-        sel_fmt_ids+=("${fid}|${cont}")
-        ((j++))
-    done
-    echo -e "  ${W}${j}.${NC} ${R}✖${NC}  Cancelar"
-    linea
-    while true; do
-        echo -ne "${Y}  ➜  Opcion: ${NC}"
-        read -r codec_choice
-
-        if [[ "$codec_choice" == "$j" ]] || [[ -z "$codec_choice" ]]; then
-            menu_principal; return
-        fi
-
-        if ! [[ "$codec_choice" =~ ^[0-9]+$ ]] || (( codec_choice < 1 || codec_choice >= j )); then
-            warn "Opcion invalida"
-            continue
-        fi
-
-        break
-    done
-
-    local sel_entry="${sel_fmt_ids[$((codec_choice - 1))]}"
-    local sel_fmt="${sel_entry%%|*}"
-    local sel_container="${sel_entry##*|}"
-
-    # ── Descarga: video elegido + 140 (m4a 129k mejor audio YT) ────
-    echo
-    linea
-    info "Descargando ${res_names[$sel_height]} + audio 140 (m4a 129k)..."
-    echo -e "  ${DIM}Formato video: ${sel_fmt}   Audio: 140${NC}"
-    linea
-
-    if yt-dlp -f "${sel_fmt}+140" \
-              --merge-output-format "$sel_container" \
-              --restrict-filenames \
-              --output "%(title).50s.%(ext)s" \
-              "$url"; then
-        echo; linea
-        ok "¡Descarga completada! 🎉"
-        linea
-        menu_conversion
-    else
-        echo; err "Error durante la descarga"
-    fi
-
-    echo -ne "${DIM}  Presiona Enter...${NC}"; read -r
-    menu_principal
-}
-
-# ====================================================================
-# Facebook — URL con reintento + opcion de audio m4a
-# ====================================================================
-descargar_facebook() {
-    clear
-    linea
-    echo -e "  ⬇️   Descargando de ${B}f  Facebook${NC}"
-    linea
-
-    local url="" tmp_formats
-
-    echo
-    echo -ne "${Y}  🔗  Pega la URL del video: ${NC}"
-    read -r url
-
-    if [[ -z "$url" ]]; then
-        err "No has ingresado ninguna URL"
-        echo -ne "${DIM}  Presiona Enter...${NC}"; read -r
-        menu_principal; return
-    fi
-
-    url="${url%%\?*}"
-    tmp_formats=$(mktemp /tmp/vget_formats.XXXXXX)
-
-    echo
-    info "URL: ${W}$url${NC}"
-    echo
-    info "Obteniendo informacion del video..."
-    linea
-
-    if ! yt-dlp -F "$url" > "$tmp_formats" 2>&1; then
-        cat "$tmp_formats"
-        rm -f "$tmp_formats"
-        echo
-        err "URL invalida o no se pudo obtener informacion"
-        echo -ne "${DIM}  Presiona Enter...${NC}"; read -r
-        menu_principal; return
-    fi
-    cat "$tmp_formats"
-
-    # Parsear IDs: audio m4a_dash y ultimo video mp4_dash
-    local audio_id video_id
-    audio_id=$(grep 'm4a_dash' "$tmp_formats" | awk '{print $1}' | head -1)
-    video_id=$(grep 'mp4_dash' "$tmp_formats" | grep 'video only' | tail -1 | awk '{print $1}')
-    rm -f "$tmp_formats"
-
-    echo
-    if [[ -n "$audio_id" && -n "$video_id" ]]; then
-        info "Formato video: ${W}${video_id}${NC}  Audio: ${W}${audio_id}${NC}"
-    else
-        warn "No se encontraron formatos DASH, usando mejor calidad disponible..."
-        audio_id="bestaudio[ext=m4a]/bestaudio"
-        video_id="bestvideo"
-    fi
-    linea
-
-    if yt-dlp -f "${video_id}+${audio_id}" \
-              --merge-output-format mp4 \
-              --restrict-filenames --output "%(title).50s.%(ext)s" "$url"; then
-        echo; linea
-        ok "¡Descarga completada! 🎉"
-        linea
-        menu_conversion
-    else
-        err "Error durante la descarga"
+        url_limpia="${url%%\&*}"
+        url_limpia="${url_limpia%%\#*}"
     fi
 
     echo
-    linea
-    echo -ne "${DIM}  Presiona Enter para continuar...${NC}"
-    read -r
-    menu_principal
-}
-
-# ====================================================================
-# Instagram — con cookies de navegador
-# ====================================================================
-descargar_instagram() {
-    clear
-    linea
-    echo -e "  ⬇️   Descargando de ${M}📷  Instagram${NC}"
-    linea
-    # Detectar navegador disponible (chrome > firefox > brave)
-    local browser=""
-    if command -v chrome &>/dev/null || command -v google-chrome &>/dev/null || command -v google-chrome-stable &>/dev/null; then
-        browser="chrome"
-    elif command -v firefox &>/dev/null; then
-        browser="firefox"
-    elif command -v brave &>/dev/null || command -v brave-browser &>/dev/null; then
-        browser="brave"
-    fi
-
-    if [[ -z "$browser" ]]; then
-        echo
-        err "No se encontro ningun navegador soportado (Chrome, Firefox, Brave)"
-        err "Instala uno de esos navegadores para descargar de Instagram"
-        echo -ne "${DIM}  Presiona Enter...${NC}"; read -r
-        menu_principal; return
-    fi
-
-    info "Navegador detectado: ${W}${browser}${NC}"
-
-    local url=""
+    sep
+    echo -en "${G}  [OK] URL limpia: ${NC}"
+    echo -e "${W}$url_limpia${NC}"
+    sep
     echo
-    echo -ne "${Y}  🔗  Pega la URL del video: ${NC}"
-    read -r url
-
-    if [[ -z "$url" ]]; then
-        err "No has ingresado ninguna URL"
-        echo -ne "${DIM}  Presiona Enter...${NC}"; read -r
-        menu_principal; return
-    fi
-
-    # Extraer solo la URL base del post: https://www.instagram.com/p/SHORTCODE/
-    if [[ "$url" =~ (https://www\.instagram\.com/p/[^/?]+/) ]]; then
-        url="${BASH_REMATCH[1]}"
-    else
-        url="${url%%\?*}"
-    fi
-
+    info "Detectando calidades disponibles..."
     echo
-    info "URL: ${W}$url${NC}"
-    echo
-    info "Verificando URL..."
-    linea
 
-    if ! yt-dlp --cookies-from-browser "$browser" \
-                --flat-playlist --print id \
-                --playlist-items 1 --quiet "$url" 2>/dev/null; then
-        echo
-        err "URL invalida o no se pudo obtener informacion"
-        echo -ne "${DIM}  Presiona Enter...${NC}"; read -r
-        menu_principal; return
-    fi
+    local formatos_raw
+    formatos_raw=$(yt-dlp -F "$url_limpia" 2>/dev/null || true)
 
-    echo
-    info "Descargando con cookies de ${W}${browser}${NC}..."
-    info "Formato: mejor video mp4_dash + audio m4a (con fallback automatico)"
-    linea
+    local res_pats=("4320" "2160" "1440" "1080" "720" "480" "360" "240" "144")
+    local res_icos=("8K (4320p)" "4K (2160p)" "2K (1440p)" "1080p" "720p" "480p" "360p" "240p" "144p")
 
-    # Registrar archivos existentes antes de descargar
-    local before=()
-    mapfile -t before < <(ls ./*.mp4 2>/dev/null || true)
+    declare -A alturas
+    local contador=1
 
-    yt-dlp --cookies-from-browser "$browser" \
-           -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo[ext=mp4]+bestaudio/bestvideo+bestaudio/best" \
-           --merge-output-format mp4 \
-           --yes-playlist --ignore-errors \
-           --restrict-filenames --output "%(playlist_index)02d-%(title).50s.%(ext)s" "$url" || true
-
-    # Detectar archivos nuevos o modificados comparando con antes
-    _DL_FILES=()
-    for f in ./*.mp4; do
-        [[ -f "$f" ]] || continue
-        local found=0
-        for ef in "${before[@]}"; do
-            [[ "$f" == "$ef" ]] && found=1 && break
-        done
-        (( found == 0 )) && _DL_FILES+=("$f")
-    done
-    # Si ya existian (re-descarga), incluirlos igual
-    if [[ ${#_DL_FILES[@]} -eq 0 ]]; then
-        mapfile -t _DL_FILES < <(ls ./*.mp4 2>/dev/null | head -20 || true)
-    fi
-
-    echo; linea
-    ok "¡Descarga completada! 🎉"
-    linea
-    menu_conversion
-
-    echo
-    linea
-    echo -ne "${DIM}  Presiona Enter para continuar...${NC}"
-    read -r
-    menu_principal
-}
-
-# ====================================================================
-# TikTok / Facebook / Instagram — descarga genérica
-# ====================================================================
-descargar() {
-    local plataforma="$1"
-    local label="$2"
-
-    clear
-    linea
-    echo -e "  ⬇️   Descargando de ${label}"
-    linea
-    echo
-    echo -ne "${Y}  🔗  Pega la URL del video: ${NC}"
-    read -r url
-
-    if [[ -z "$url" ]]; then
-        err "No has ingresado ninguna URL"
-        echo -ne "${DIM}  Presiona Enter para continuar...${NC}"
-        read -r
-        menu_principal
-        return
-    fi
-
-    url="${url%%\?*}"
-
-    echo
-    info "URL: ${W}$url${NC}"
-    echo
-    info "Obteniendo informacion del video..."
-    linea
-
-    local tmp_formats; tmp_formats=$(mktemp /tmp/vget_formats.XXXXXX)
-    yt-dlp -F "$url" > "$tmp_formats" 2>&1
-    cat "$tmp_formats"
-
-    echo
-    linea
-    info "Seleccionando mejor formato disponible..."
-
-    local best_format=""
-    while IFS= read -r line; do
-        local first_word="${line%% *}"
-        if [[ -n "$first_word" && "$first_word" != "ID" && "$first_word" != "---"* && "$first_word" != "Available" && "$first_word" != "download" ]]; then
-            best_format="$first_word"
-        fi
-    done < "$tmp_formats"
-    rm -f "$tmp_formats"
-
-    echo
-    if [[ -z "$best_format" ]]; then
-        warn "No se encontro formato especifico, usando mejor calidad disponible..."
-        yt-dlp -f "best" --restrict-filenames --output "%(title).50s.%(ext)s" "$url"
-    else
-        ok "Formato seleccionado: ${W}$best_format${NC}"
-        echo -e "  ${DIM}Comando: yt-dlp -f \"$best_format\" --restrict-filenames -o \"%(title).50s.%(ext)s\" \"$url\"${NC}"
-        linea
-        if yt-dlp -f "$best_format" --restrict-filenames --output "%(title).50s.%(ext)s" "$url"; then
-            echo; linea
-            ok "¡Descarga completada! 🎉"
-            linea
-            menu_conversion
-        fi
-    fi
-
-    echo
-    linea
-    echo -ne "${DIM}  Presiona Enter para continuar...${NC}"
-    read -r
-    menu_principal
-}
-
-# ====================================================================
-# Conversión de audio a MP3 (video stream copiado sin recodificar)
-# ====================================================================
-menu_conversion() {
-    while true; do
-        echo
-        linea
-        echo -e "  ${C}¿Quieres convertir video con audio MP3?${NC}"
-        echo -e "  ${DIM}(Funciona bien para Resolve — solo convierte el audio, reserva el el codec de video)${NC}"
-        echo
-        echo -e "  ${W}1.${NC} ${G}✔${NC}  Si — libmp3lame (rapido)"
-        echo -e "  ${W}2.${NC} ${Y}✖${NC}  No — mantener audio original"
-        echo
-        echo -ne "${Y}  ➜  Selecciona una opcion (1-2): ${NC}"
-        read -r conv_opcion
-
-        case "$conv_opcion" in
-            1)
-                echo; linea
-                info "Iniciando conversion de audio... ⚙️"
-                linea
-                convert_video
-                return
-                ;;
-            2)
-                echo; ok "Audio mantenido en formato original."
-                return
-                ;;
-            *)
-                warn "Opcion no valida, intenta de nuevo."
-                ;;
-        esac
-    done
-}
-
-_convert_one() {
-    local video_file="$1"
-    local temp_converted="${video_file%.mp4}_temp_converted.mp4"
-
-    info "Convirtiendo: ${W}${video_file}${NC}"
-    linea
-
-    if ffmpeg -i "$video_file" -c:v copy -c:a libmp3lame "$temp_converted" -y; then
-        echo; linea
-        if rm "$video_file" && mv "$temp_converted" "$video_file"; then
-            ok "Guardado: ${W}$video_file${NC} ✅"
-        else
-            err "Error al reemplazar: $video_file"
-        fi
-        linea
-    else
-        echo; linea
-        err "Error convirtiendo: $video_file"
-        warn "Verifica que ffmpeg este instalado: ${DIM}pacman -S ffmpeg${NC}"
-        linea
-        rm -f "$temp_converted"
-    fi
-}
-
-convert_video() {
-    # Instagram: convertir todos los archivos descargados
-    if [[ ${#_DL_FILES[@]} -gt 0 ]]; then
-        local files=("${_DL_FILES[@]}")
-        _DL_FILES=()
-
-        local total=${#files[@]}
-        info "Videos a convertir: ${W}${total}${NC}"
-        linea
-
-        local current=0
-        for video_file in "${files[@]}"; do
-            current=$(( current + 1 ))
-            echo
-            info "[${current}/${total}]"
-            _convert_one "$video_file"
-        done
-
-        echo
-        ok "Conversion completada: ${W}${current}/${total}${NC} archivos"
-
-    # Otros: convertir solo el ultimo .mp4
-    else
-        info "Buscando video descargado..."
-
-        local video_file; video_file=$(ls -t ./*.mp4 2>/dev/null | head -n1 || true)
-
-        if [[ -z "$video_file" ]]; then
-            err "No se encontro archivo .mp4 en el directorio actual"
-            return
-        fi
-
-        echo
-        _convert_one "$video_file"
-    fi
-}
-
-salir() {
-    clear
-    echo
-    echo -e "${M}  ¡Hasta luego!${NC}"
-    echo
-    sleep 1
-    exit 0
-}
-
-# ====================================================================
-# Verificar e instalar dependencias
-# ====================================================================
-verificar_dependencias() {
-    local pkgs=(yt-dlp ffmpeg rtmpdump atomicparsley aria2
-                python-curl_cffi python-mutagen python-pycryptodome
-                python-websockets python-brotli python-xattr
-                python-secretstorage)
-    local faltantes=()
-
-    clear
     box_top
-    brow "  Verificando dependencias...  " "  ${W}Verificando dependencias...${NC}  "
+    brow_title "         CALIDAD DE VIDEO"
+    box_mid
+    brow_item "$R" "0" "Cancelar y volver al menu"
+
+    for i in "${!res_pats[@]}"; do
+        local pat="${res_pats[$i]}"
+        local found
+        found=$(echo "$formatos_raw" | grep "$pat" | grep -v "audio only" | head -1 || true)
+        if [[ -n "$found" ]]; then
+            brow_item "$M" "$contador" "${res_icos[$i]}"
+            alturas[$contador]="$pat"
+            ((contador++))
+        fi
+    done
+
+    local audio_opcion=$contador
+    ((contador++))
+    brow_item "$M" "$audio_opcion" "Solo audio"
+    local subs_opcion=$contador
+    ((contador++))
+    brow_item "$C" "$subs_opcion" "Descargar subtitulos"
     box_bot
     echo
 
-    for pkg in "${pkgs[@]}"; do
-        if pacman -Q "$pkg" &>/dev/null; then
-            ok "$pkg"
-        else
-            warn "$pkg  (no instalado)"
-            faltantes+=("$pkg")
-        fi
+    local eleccion
+    while true; do
+        echo -en "${Y}  Elige una opcion: ${NC}"
+        read -r eleccion
+        [[ "$eleccion" =~ ^[0-9]+$ ]] && break
+        warn "Opcion invalida"
     done
 
-    if [[ ${#faltantes[@]} -gt 0 ]]; then
-        echo
-        info "Instalando paquetes faltantes: ${faltantes[*]}"
-        sudo pacman -Sy --noconfirm "${faltantes[@]}"
+    if [[ "$eleccion" == "0" ]]; then
+        info "Volviendo al menu..."
+        sleep 1
+        return
     fi
 
     echo
-    info "Verificando actualizaciones de yt-dlp..."
-    yt-dlp -U
+    info "Iniciando descarga..."
     echo
-    sleep 2
+
+    local titulo_raw titulo_yt
+    titulo_raw=$(yt-dlp --get-title "$url_limpia" 2>/dev/null || echo "video")
+    titulo_yt=$(limpiar_titulo "$titulo_raw" 25)
+
+    if [[ "$eleccion" == "$audio_opcion" ]]; then
+        # ── Submenú: formato de audio ─────────────────────────────────
+        echo
+        box_top
+        brow_title "      FORMATO DE AUDIO"
+        box_mid
+        brow_item "$M" "1" "MP3  (compatible, ~320kbps)"
+        brow_item "$M" "2" "FLAC (sin perdida)"
+        brow_item "$M" "3" "WAV  (sin compresion, PCM)"
+        brow_item "$M" "4" "OGG  (Vorbis, codigo abierto)"
+        brow_item "$M" "5" "M4A  (AAC, Apple/Android)"
+        brow_item "$M" "6" "OPUS (mejor calidad/tamano)"
+        brow_item "$R" "0" "Cancelar"
+        box_bot
+        echo
+        local fmt_audio
+        while true; do
+            echo -en "${Y}  Elige formato de audio: ${NC}"
+            read -r fmt_audio
+            [[ "$fmt_audio" =~ ^[0-6]$ ]] && break
+            warn "Opcion invalida"
+        done
+
+        if [[ "$fmt_audio" == "0" ]]; then
+            info "Cancelado."
+            echo -en "${DIM}  Presiona Enter para volver${NC}"
+            read -r
+            return
+        fi
+
+        local audio_fmt audio_ext audio_args
+        case "$fmt_audio" in
+            1) audio_fmt="mp3";  audio_ext="mp3";  audio_args="--audio-quality 0 --postprocessor-args \"-ar 44100\"" ;;
+            2) audio_fmt="flac"; audio_ext="flac"; audio_args="--audio-quality 0" ;;
+            3) audio_fmt="wav";  audio_ext="wav";  audio_args="--audio-quality 0" ;;
+            4) audio_fmt="vorbis"; audio_ext="ogg"; audio_args="--audio-quality 0" ;;
+            5) audio_fmt="m4a"; audio_ext="m4a";  audio_args="--audio-quality 0" ;;
+            6) audio_fmt="opus"; audio_ext="opus"; audio_args="--audio-quality 0" ;;
+        esac
+
+        echo
+        info "Extrayendo audio en ${audio_ext^^}..."
+        echo
+        eval yt-dlp -f "bestaudio" --extract-audio \
+               --audio-format "$audio_fmt" $audio_args \
+               --output "${titulo_yt}.%(ext)s" "$url_limpia"
+        echo
+        sep
+        ok "Audio descargado exitosamente!"
+        echo -e "  Archivo: ${W}${titulo_yt}.${audio_ext}${NC}"
+        sep
+        echo
+        echo -en "${DIM}  Presiona Enter para volver al menu${NC}"
+        read -r
+        return
+    elif [[ "$eleccion" == "$subs_opcion" ]]; then
+        # ── Submenú: subtítulos ───────────────────────────────────────
+        echo
+        info "Detectando subtitulos disponibles..."
+        echo
+
+        # Obtener lista de subtítulos (normales + automáticos)
+        local subs_raw
+        local -a idiomas_cod idiomas_nom auto_cod auto_nom
+        subs_raw=$(yt-dlp --list-subs "$url_limpia" 2>&1 || true)
+
+        # Extraer subtítulos reales
+        idiomas_cod=()
+        idiomas_nom=()
+        while IFS= read -r linea; do
+            if echo "$linea" | grep -qE '^[a-z]{2,}(-[A-Za-z]{2,})?[[:space:]]'; then
+                local cod nom
+                cod=$(echo "$linea" | awk '{print $1}')
+                nom=$(echo "$linea" | awk '{print $2}')
+                idiomas_cod+=("$cod")
+                idiomas_nom+=("$nom")
+            fi
+        done < <(echo "$subs_raw" | sed -n '/Available subtitles/,/Available automatic\|^$/p' | tail -n +2 | head -n -1)
+
+        # Extraer subtítulos automáticos
+        auto_cod=()
+        auto_nom=()
+        while IFS= read -r linea; do
+            if echo "$linea" | grep -qE '^[a-z]{2,}(-[A-Za-z]{2,})?[[:space:]]'; then
+                local cod nom
+                cod=$(echo "$linea" | awk '{print $1}')
+                nom=$(echo "$linea" | awk '{print $2}')
+                auto_cod+=("$cod")
+                auto_nom+=("$nom")
+            fi
+        done < <(echo "$subs_raw" | sed -n '/Available automatic captions/,/^$/p' | tail -n +2)
+
+        local total_man=${#idiomas_cod[@]}
+        local total_auto=${#auto_cod[@]}
+
+        if [[ $total_man -eq 0 && $total_auto -eq 0 ]]; then
+            warn "Este video no tiene subtitulos disponibles."
+            echo
+            echo -en "${DIM}  Presiona Enter para volver${NC}"
+            read -r
+            return
+        fi
+
+        # Mostrar menú de idiomas
+        box_top
+        brow_title "       IDIOMA DE SUBTITULOS"
+        box_mid
+        brow_item "$R" "0" "Cancelar"
+
+        local idx=1
+        local -A mapa_idioma   # idx -> "cod:tipo"
+
+        if [[ $total_man -gt 0 ]]; then
+            # Separador visual para subtítulos reales
+            printf "${C}║${NC}${DIM}  -- Subtitulos reales --%-19s${NC}${C}║${NC}\n" ""
+            for i in "${!idiomas_cod[@]}"; do
+                local label="${idiomas_cod[$i]}  ${idiomas_nom[$i]}"
+                brow_item "$G" "$idx" "$label"
+                mapa_idioma[$idx]="${idiomas_cod[$i]}:manual"
+                ((idx++))
+            done
+        fi
+
+        if [[ $total_auto -gt 0 ]]; then
+            printf "${C}║${NC}${DIM}  -- Generados automaticamente --%-11s${NC}${C}║${NC}\n" ""
+            for i in "${!auto_cod[@]}"; do
+                local label="${auto_cod[$i]}  ${auto_nom[$i]}  (auto)"
+                brow_item "$Y" "$idx" "$label"
+                mapa_idioma[$idx]="${auto_cod[$i]}:auto"
+                ((idx++))
+            done
+        fi
+
+        box_bot
+        echo
+
+        local elec_sub
+        local max_sub=$(( idx - 1 ))
+        while true; do
+            echo -en "${Y}  Elige idioma [0-${max_sub}]: ${NC}"
+            read -r elec_sub
+            [[ "$elec_sub" =~ ^[0-9]+$ ]] && \
+                [[ "$elec_sub" -ge 0 && "$elec_sub" -le "$max_sub" ]] && break
+            warn "Opcion invalida"
+        done
+
+        if [[ "$elec_sub" == "0" ]]; then
+            info "Cancelado."
+            echo -en "${DIM}  Presiona Enter para volver${NC}"
+            read -r
+            return
+        fi
+
+        # Submenú: formato de subtítulo
+        echo
+        box_top
+        brow_title "      FORMATO DE SUBTITULO"
+        box_mid
+        brow_item "$M" "1" "SRT  (el mas compatible)"
+        brow_item "$M" "2" "VTT  (WebVTT, web/streaming)"
+        brow_item "$M" "3" "ASS  (con estilos y colores)"
+        brow_item "$M" "4" "SRT + incrustar en video MP4"
+        brow_item "$R" "0" "Cancelar"
+        box_bot
+        echo
+
+        local elec_fmt_sub
+        while true; do
+            echo -en "${Y}  Elige formato: ${NC}"
+            read -r elec_fmt_sub
+            [[ "$elec_fmt_sub" =~ ^[0-4]$ ]] && break
+            warn "Opcion invalida"
+        done
+
+        if [[ "$elec_fmt_sub" == "0" ]]; then
+            info "Cancelado."
+            echo -en "${DIM}  Presiona Enter para volver${NC}"
+            read -r
+            return
+        fi
+
+        local info_sel="${mapa_idioma[$elec_sub]}"
+        local cod_idioma="${info_sel%%:*}"
+        local tipo_sub="${info_sel##*:}"
+
+        echo
+        info "Descargando subtitulos [${cod_idioma}]..."
+        echo
+
+        local sub_flag="--write-subs"
+        [[ "$tipo_sub" == "auto" ]] && sub_flag="--write-auto-subs"
+
+        case "$elec_fmt_sub" in
+            1|4)
+                local sub_fmt="srt"
+                ;;
+            2) local sub_fmt="vtt" ;;
+            3) local sub_fmt="ass" ;;
+        esac
+
+        if [[ "$elec_fmt_sub" == "4" ]]; then
+            # Descargar video + incrustar subtítulos como soft-sub
+            info "Descargando video con subtitulos incrustados..."
+            echo
+            yt-dlp -f "bestvideo+bestaudio/best" \
+                   $sub_flag \
+                   --sub-lang "$cod_idioma" \
+                   --sub-format "srt/best" \
+                   --embed-subs \
+                   --merge-output-format mp4 \
+                   --output "${titulo_yt}.%(ext)s" \
+                   "$url_limpia"
+            echo
+            sep
+            ok "Video con subtitulos descargado!"
+            echo -e "  Archivo: ${W}${titulo_yt}.mp4${NC}"
+        else
+            # Solo el archivo de subtítulos
+            yt-dlp --skip-download \
+                   $sub_flag \
+                   --sub-lang "$cod_idioma" \
+                   --sub-format "${sub_fmt}/best" \
+                   --convert-subs "$sub_fmt" \
+                   --output "${titulo_yt}.%(ext)s" \
+                   "$url_limpia"
+            echo
+            sep
+            ok "Subtitulos descargados!"
+            echo -e "  Archivo: ${W}${titulo_yt}.${cod_idioma}.${sub_fmt}${NC}"
+        fi
+
+        sep
+        echo
+        echo -en "${DIM}  Presiona Enter para volver al menu${NC}"
+        read -r
+        return
+    elif [[ -n "${alturas[$eleccion]+x}" ]]; then
+        local altura="${alturas[$eleccion]}"
+        yt-dlp -f "bestvideo[height=${altura}]+bestaudio/best[height=${altura}]" \
+               --merge-output-format mp4 \
+               --output "${titulo_yt}.%(ext)s" "$url_limpia"
+    else
+        err "Opcion invalida."
+        echo -en "${DIM}  Presiona Enter para volver${NC}"
+        read -r
+        return
+    fi
+
+    echo
+    sep
+    ok "Descarga completada exitosamente!"
+    sep
+    echo
+    echo -en "${DIM}  Presiona Enter para volver al menu${NC}"
+    read -r
 }
 
-verificar_dependencias
-menu_principal
+# ====================================================================
+# FACEBOOK
+# ====================================================================
+descargar_facebook() {
+    clear
+    echo
+    box_top
+    brow_title "       FACEBOOK DOWNLOADER"
+    box_mid
+    brow_item "$M" "1" "Descargar video HD (mejor calidad)"
+    brow_item "$M" "2" "Descargar video SD (menor calidad)"
+    brow_item "$M" "3" "Descargar solo audio (MP3)"
+    brow_item "$R" "0" "Volver al menu"
+    box_bot
+    echo
+
+    local modo_fb
+    echo -en "${Y}  Elige una opcion: ${NC}"
+    read -r modo_fb
+
+    if [[ "$modo_fb" == "0" ]]; then
+        info "Volviendo al menu..."
+        sleep 1
+        return
+    fi
+
+    if [[ "$modo_fb" != "1" && "$modo_fb" != "2" && "$modo_fb" != "3" ]]; then
+        err "Opcion invalida."
+        sleep 1
+        return
+    fi
+
+    echo
+    info "Pega la URL del video de Facebook"
+    echo -en "${Y}  URL: ${NC}"
+    read -r url
+
+    # Limpiar URL: quitar parámetros de tracking
+    local url_limpia
+    url_limpia="${url%%\?*}"
+
+    echo
+    sep
+    echo -en "${G}  [OK] URL limpia: ${NC}"
+    echo -e "${W}$url_limpia${NC}"
+    sep
+    echo
+
+    # Obtener lista de formatos
+    info "Analizando formatos disponibles..."
+    echo
+
+    local formatos_raw
+    formatos_raw=$(yt-dlp -F "$url_limpia" 2>/dev/null || true)
+
+    if [[ -z "$formatos_raw" ]]; then
+        err "No se pudo obtener informacion del video."
+        info "Verifica que la URL sea correcta y el video sea publico."
+        echo
+        echo -en "${DIM}  Presiona Enter para volver${NC}"
+        read -r
+        return
+    fi
+
+    # Mostrar formatos detectados (debug ligero)
+    echo "$formatos_raw"
+    echo
+
+    local titulo_raw titulo_limpio
+    titulo_raw=$(yt-dlp --get-title "$url_limpia" 2>/dev/null || echo "video")
+    titulo_limpio=$(limpiar_titulo "$titulo_raw" 25)
+
+    local tmp_name="fb_tmp_dl"
+
+    # ── Modo MP3 ──────────────────────────────────────────────────────
+    if [[ "$modo_fb" == "3" ]]; then
+        info "Extrayendo audio en MP3..."
+        echo
+        yt-dlp -x --audio-format mp3 --audio-quality 0 \
+               --output "${titulo_limpio}.%(ext)s" "$url_limpia"
+        echo
+        sep
+        ok "Descarga completada exitosamente!"
+        echo -e "  Archivo: ${W}${titulo_limpio}.mp3${NC}"
+        sep
+        echo
+        echo -en "${DIM}  Presiona Enter para volver al menu${NC}"
+        read -r
+        return
+    fi
+
+    # ── Seleccionar formato de video (HD o SD) ────────────────────────
+    local formato_video
+
+    if [[ "$modo_fb" == "1" ]]; then
+        # HD: buscar el formato de mayor resolución con video
+        # Preferir dash video + dash audio por separado; si no, bestvideo
+        local fmt_hd_video fmt_hd_audio
+
+        # Buscar el último formato mp4_dash con video (mayor resolución)
+        fmt_hd_video=$(echo "$formatos_raw" | \
+                       grep -i "mp4_dash\|dash" | \
+                       grep -iv "audio only" | \
+                       tail -1 | awk '{print $1}' || true)
+
+        # Buscar audio dash
+        fmt_hd_audio=$(echo "$formatos_raw" | \
+                       grep -i "m4a_dash\|audio" | \
+                       grep -i "audio only" | \
+                       head -1 | awk '{print $1}' || true)
+
+        if [[ -n "$fmt_hd_video" && -n "$fmt_hd_audio" ]]; then
+            formato_video="${fmt_hd_video}+${fmt_hd_audio}"
+            sep
+            echo -en "${G}  [OK] Formato HD: ${NC}"
+            echo -e "${M}video=${fmt_hd_video}  audio=${fmt_hd_audio}${NC}"
+            sep
+        else
+            # Fallback: bestvideo+bestaudio
+            formato_video="bestvideo+bestaudio"
+            sep
+            warn "No se encontro DASH especifico, usando bestvideo+bestaudio"
+            sep
+        fi
+
+    else
+        # SD: buscar el primer formato mp4_dash con video (menor resolución)
+        local fmt_sd_video fmt_sd_audio
+
+        fmt_sd_video=$(echo "$formatos_raw" | \
+                       grep -i "mp4_dash\|dash" | \
+                       grep -iv "audio only" | \
+                       head -1 | awk '{print $1}' || true)
+
+        fmt_sd_audio=$(echo "$formatos_raw" | \
+                       grep -i "m4a_dash\|audio" | \
+                       grep -i "audio only" | \
+                       head -1 | awk '{print $1}' || true)
+
+        if [[ -n "$fmt_sd_video" && -n "$fmt_sd_audio" ]]; then
+            formato_video="${fmt_sd_video}+${fmt_sd_audio}"
+            sep
+            echo -en "${G}  [OK] Formato SD: ${NC}"
+            echo -e "${M}video=${fmt_sd_video}  audio=${fmt_sd_audio}${NC}"
+            sep
+        else
+            formato_video="worstvideo+worstaudio/worst"
+            sep
+            warn "No se encontro DASH especifico, usando calidad minima"
+            sep
+        fi
+    fi
+
+    echo
+    info "Iniciando descarga..."
+    echo
+
+    yt-dlp -f "$formato_video" \
+           --merge-output-format mp4 \
+           --output "${tmp_name}.%(ext)s" \
+           "$url_limpia"
+
+    # Detectar archivo descargado
+    local archivo_tmp ext_real=""
+    archivo_tmp=""
+    for ext in mp4 webm mkv mov avi; do
+        if [[ -f "${tmp_name}.${ext}" ]]; then
+            archivo_tmp="${tmp_name}.${ext}"
+            ext_real="$ext"
+            break
+        fi
+    done
+
+    echo
+    sep
+    ok "Descarga completada exitosamente!"
+    sep
+    echo
+
+    if [[ -z "$archivo_tmp" ]]; then
+        echo -en "${DIM}  Presiona Enter para volver al menu${NC}"
+        read -r
+        return
+    fi
+
+    # ── Preguntar conversión para DaVinci Resolve (igual que TikTok) ──
+    _menu_conversion_davinci "$archivo_tmp" "$ext_real" "$titulo_limpio"
+}
+
+# ====================================================================
+# MAIN
+# ====================================================================
+actualizar_ytdlp
+show_header
+
+while true; do
+    echo -en "${Y}  Elige una opcion: ${NC}"
+    read -r opcion
+
+    case "$opcion" in
+        1)
+            descargar_tiktok
+            show_header
+            ;;
+        2)
+            descargar_youtube
+            show_header
+            ;;
+        3)
+            descargar_facebook
+            show_header
+            ;;
+        0)
+            echo
+            echo -e "${C}  Hasta luego!${NC}"
+            echo
+            exit 0
+            ;;
+        *)
+            err "Opcion invalida"
+            sleep 1
+            show_header
+            ;;
+    esac
+done
