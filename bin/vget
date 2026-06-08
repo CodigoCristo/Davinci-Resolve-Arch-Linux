@@ -408,7 +408,20 @@ descargar_youtube() {
     for i in "${!res_pats[@]}"; do
         local pat="${res_pats[$i]}"
         local found
-        found=$(echo "$formatos_raw" | grep "$pat" | grep -v "audio only" | head -1 || true)
+        # "1080p" = el lado corto es 1080, tanto en landscape (1920x1080)
+        # como en portrait/Shorts (1080x1920).
+        # Usamos la dimensión MENOR de WxH como etiqueta "p".
+        found=$(echo "$formatos_raw" | grep -v "audio only" | \
+            awk -v p="$pat" '
+            {
+                for(i=1;i<=NF;i++){
+                    if($i ~ /^[0-9]+x[0-9]+$/){
+                        n=split($i,d,"x"); w=d[1]+0; h=d[2]+0
+                        menor=(w<h ? w : h)
+                        if(menor == p+0) {print; break}
+                    }
+                }
+            }' | head -1 || true)
         if [[ -n "$found" ]]; then
             brow_item "$M" "$contador" "${res_icos[$i]}"
             alturas[$contador]="$pat"
@@ -685,7 +698,11 @@ descargar_youtube() {
         return
     elif [[ -n "${alturas[$eleccion]+x}" ]]; then
         local altura="${alturas[$eleccion]}"
-        yt-dlp -f "bestvideo[height=${altura}]+bestaudio/best[height=${altura}]" \
+        # altura = lado corto (ej: 1080 = 1080p)
+        # Landscape: bestvideo[height=1080]  → 1920x1080
+        # Portrait:  bestvideo[width=1080]   → 1080x1920
+        # Fallback progresivo si no existe el formato exacto
+        yt-dlp -f "bestvideo[height=${altura}][width>${altura}]+bestaudio/bestvideo[width=${altura}][height>${altura}]+bestaudio/bestvideo[height<=${altura}][width>${altura}]+bestaudio/bestvideo[width<=${altura}][height>${altura}]+bestaudio/bestvideo[height<=${altura}]+bestaudio/best[height<=${altura}]/best" \
                --merge-output-format mp4 \
                --output "${titulo_yt}.%(ext)s" "$url_limpia"
     else
