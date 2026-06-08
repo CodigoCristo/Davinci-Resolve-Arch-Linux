@@ -110,6 +110,7 @@ export LIBVA_DRIVER_NAME=i965
 ### 5. OpenCL
 
 ```bash
+
 sudo pacman -S ocl-icd      # ICD loader
 sudo pacman -S clinfo        # listar dispositivos OpenCL
 ```
@@ -121,7 +122,10 @@ sudo pacman -S clinfo        # listar dispositivos OpenCL
 | **Beignet** (deprecado) | `beignet` (AUR) | Gen 7 (Ivy Bridge) y posterior |
 
 ```bash
-# Gen 12 y posterior / Intel Arc — recomendado
+# Opción recomendada — Rusticl vía Mesa (cualquier GPU)
+sudo pacman -S opencl-mesa lib32-opencl-mesa
+
+# Gen 12 y posterior / Intel Arc — recomendado No instales o borra opencl-mesa para evitar conflictos
 sudo pacman -S intel-compute-runtime
 
 # Gen 8 a Gen 11 (Broadwell, Skylake, Kaby Lake, Ice Lake)
