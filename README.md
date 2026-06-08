@@ -117,11 +117,6 @@ Desde diciembre 2025, Arch Linux usa **módulos open source de NVIDIA por defect
 sudo pacman -S nvidia-open nvidia-utils lib32-nvidia-utils opencl-nvidia lib32-opencl-nvidia nvidia-settings libva-nvidia-driver libva-utils vdpauinfo
 ```
 
-> ⚠️ Si tienes configuración híbrida Intel/NVIDIA en modo on-demand, necesitas lanzar Resolve con:
-> ```bash
-> __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia /opt/resolve/bin/resolve
-> ```
-
 ---
 
 ### 🔵 Intel
