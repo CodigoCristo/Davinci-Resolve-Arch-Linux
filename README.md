@@ -73,10 +73,12 @@ DaVinci Resolve funciona con varias implementaciones OpenCL en AMD. Se recomiend
 #### Alternativa: OpenCL via Mesa (Rusticl) — cualquier GPU AMD soportada por Mesa
 
 ```bash
-sudo pacman -S opencl-mesa lib32-opencl-mesa
 
 # Mesa — driver OpenGL y base de todo lo demás
 sudo pacman -S mesa lib32-mesa mesa-utils lib32-mesa-utils linux-firmware-amdgpu xf86-video-amdgpu vulkan-icd-loader lib32-vulkan-icd-loader vulkan-radeon lib32-vulkan-radeon
+
+# Mesa opencl
+sudo pacman -S opencl-mesa lib32-opencl-mesa
 
 # Aceleración de vídeo por hardware (VA-API)
 sudo pacman -S libva lib32-libva libva-mesa-driver lib32-libva-mesa-driver libva-utils vdpauinfo libvdpau-va-gl
@@ -112,17 +114,8 @@ Desde diciembre 2025, Arch Linux usa **módulos open source de NVIDIA por defect
 #### RTX 20xx / GTX 1650 (Turing) y más nuevos — open kernel modules
 
 ```bash
-sudo pacman -S nvidia-open nvidia-utils lib32-nvidia-utils nvidia-settings opencl-nvidia lib32-opencl-nvidia
+sudo pacman -S nvidia-open nvidia-utils lib32-nvidia-utils opencl-nvidia lib32-opencl-nvidia nvidia-settings libva-nvidia-driver libva-utils vdpauinfo
 ```
-
-#### GTX 10xx (Pascal) y GTX 900 (Maxwell) — legacy desde AUR
-
-```bash
-yay -S nvidia-580xx-dkms nvidia-580xx-utils lib32-nvidia-580xx-utils
-sudo pacman -S opencl-nvidia lib32-opencl-nvidia
-```
-
-> ⚠️ Pascal (GTX 10xx) y Maxwell (GTX 900) ya no están soportados en los repositorios oficiales desde el driver 590. Usa el paquete legacy `nvidia-580xx-dkms` del AUR.
 
 > ⚠️ Si tienes configuración híbrida Intel/NVIDIA en modo on-demand, necesitas lanzar Resolve con:
 > ```bash
@@ -136,20 +129,26 @@ sudo pacman -S opencl-nvidia lib32-opencl-nvidia
 #### Gen12 (Tiger/Rocket Lake) en adelante — intel-compute-runtime (recomendado, probado y funcional con DR)
 
 ```bash
-sudo pacman -S intel-compute-runtime vulkan-intel lib32-vulkan-intel intel-media-driver
+sudo pacman -S mesa lib32-mesa mesa-utils lib32-mesa-utils linux-firmware-intel 
+sudo pacman -S intel-compute-runtime vulkan-intel lib32-vulkan-intel intel-media-driver vulkan-icd-loader lib32-vulkan-icd-loader vulkan-intel lib32-vulkan-intel
+sudo pacman -S libva lib32-libva libva-utils vdpauinfo libvdpau-va-gl 
 ```
 
 #### Gen8–Gen11 (Broadwell, Skylake, Ice Lake) — runtime legacy
 
 ```bash
-yay -S intel-compute-runtime-legacy vulkan-intel lib32-vulkan-intel
+sudo pacman -S mesa lib32-mesa mesa-utils lib32-mesa-utils linux-firmware-intel 
+yay -S intel-compute-runtime-legacy vulkan-intel lib32-vulkan-intel intel-media-driver vulkan-icd-loader lib32-vulkan-icd-loader vulkan-intel lib32-vulkan-intel
+sudo pacman -S libva lib32-libva libva-utils vdpauinfo libvdpau-va-gl 
 ```
 
-#### Alternativa: OpenCL via Mesa (Rusticl) — iGPU Intel soportadas por Mesa
+#### Alternativa: OpenCL via Mesa (Rusticl) — iGPU Intel soportadas por Mesa 
 
 ```bash
-sudo pacman -S opencl-mesa
+sudo pacman -S opencl-mesa lib32-opencl-mesa
 ```
+
+Si quieres instalar  `opencl-mesa` debes borrar `intel-compute-runtime` o `intel-compute-runtime-legacy`, para que no genere conflicto solo funciona con un paquete de openCL
 
 > Para activar Rusticl en Intel: `RUSTICL_ENABLE=iris /opt/resolve/bin/resolve`
 
