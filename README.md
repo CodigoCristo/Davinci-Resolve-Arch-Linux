@@ -70,6 +70,21 @@ DaVinci Resolve requiere drivers **OpenGL y OpenCL** funcionales. Instala **solo
 
 DaVinci Resolve funciona con varias implementaciones OpenCL en AMD. Se recomiendan las siguientes según tu GPU:
 
+#### Alternativa: OpenCL via Mesa (Rusticl) — cualquier GPU AMD soportada por Mesa
+
+```bash
+sudo pacman -S opencl-mesa lib32-opencl-mesa
+
+# Mesa — driver OpenGL y base de todo lo demás
+sudo pacman -S mesa lib32-mesa mesa-utils lib32-mesa-utils linux-firmware-amdgpu xf86-video-amdgpu vulkan-icd-loader lib32-vulkan-icd-loader vulkan-radeon lib32-vulkan-radeon
+
+# Aceleración de vídeo por hardware (VA-API)
+sudo pacman -S libva lib32-libva libva-mesa-driver lib32-libva-mesa-driver libva-utils vdpauinfo libvdpau-va-gl
+
+```
+
+> Para activar Rusticl en AMD: `RUSTICL_ENABLE=radeonsi /opt/resolve/bin/resolve`
+
 #### RX 500 (Polaris) y más nuevos — ROCm (recomendado)
 
 ```bash
@@ -86,16 +101,6 @@ sudo pacman -S rocm-opencl-runtime
 > ```
 
 > ⚠️ Si usas RX 580 con `opencl-amd` y mesa y DaVinci crashea, prueba con `rocm-opencl-runtime` y `ROC_ENABLE_PRE_VEGA=1`.
-
-#### Alternativa: OpenCL via Mesa (Rusticl) — cualquier GPU AMD soportada por Mesa
-
-```bash
-sudo pacman -S opencl-mesa
-```
-
-> Para activar Rusticl en AMD: `RUSTICL_ENABLE=radeonsi /opt/resolve/bin/resolve`
-
-
 Si tienes `rocm-opencl-runtime` o `opencl-amd` debes borrar `opencl-mesa`, para que no genere conflicto solo funciona con un paquete de openCL
 
 ---
