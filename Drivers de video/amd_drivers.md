@@ -71,7 +71,7 @@ Elegir **una** de las siguientes implementaciones:
 
 ```bash
 # Opción recomendada — Rusticl vía Mesa (cualquier GPU AMD con amdgpu)
-sudo pacman -S opencl-mesa
+sudo pacman -S opencl-mesa lib32-opencl-mesa
 # Activar (añadir a ~/.bashrc / ~/.zshrc):
 export RUSTICL_ENABLE=radeonsi
 
