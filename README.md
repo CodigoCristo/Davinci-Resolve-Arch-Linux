@@ -226,7 +226,7 @@ git clone https://github.com/EdvinNilsson/ffmpeg_encoder_plugin.git
 
 cd ffmpeg_encoder_plugin ; mkdir build ; cd build
 
-cmake .. ; make
+sudo pacman -S cmake --noconfirm ; cmake .. ; make
 
 mkdir -p /opt/resolve/IOPlugins/ffmpeg_encoder_plugin.dvcp.bundle/Contents/Linux-x86-64/ && \
   cp -rf ffmpeg_encoder_plugin.dvcp /opt/resolve/IOPlugins/ffmpeg_encoder_plugin.dvcp.bundle/Contents/Linux-x86-64/
@@ -234,7 +234,7 @@ mkdir -p /opt/resolve/IOPlugins/ffmpeg_encoder_plugin.dvcp.bundle/Contents/Linux
 
 - 🔗 [davinci-linux-aac-codec](https://github.com/Toxblh/davinci-linux-aac-codec) — Soporte de codec AAC
 ```bash
-sudo pacman -S clang --noconfirm ; git clone https://github.com/Toxblh/davinci-linux-aac-codec.git
+sudo pacman -S clang cmake --noconfirm ; git clone https://github.com/Toxblh/davinci-linux-aac-codec.git
 
 cd davinci-linux-aac-codec ; ./build.sh ; sudo ./install.sh 
 ```
