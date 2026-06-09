@@ -106,6 +106,77 @@ limpiar_titulo() {
     echo "$titulo"
 }
 
+# ── Verificar e instalar dependencias ────────────────────────────────
+verificar_dependencias() {
+    clear
+    echo
+    box_top
+    brow_title "    VERIFICANDO DEPENDENCIAS"
+    box_bot
+    echo
+
+    # ── yt-dlp ────────────────────────────────────────────────────────
+    if command -v yt-dlp &>/dev/null; then
+        ok "yt-dlp encontrado: $(yt-dlp --version 2>/dev/null)"
+    else
+        warn "yt-dlp no encontrado. Instalando con pacman..."
+        echo
+        if sudo pacman -Sy yt-dlp --noconfirm; then
+            ok "yt-dlp instalado correctamente!"
+        else
+            err "No se pudo instalar yt-dlp. Instalalo manualmente."
+            sleep 3
+            exit 1
+        fi
+    fi
+
+    echo
+
+    # ── python-curl-cffi ──────────────────────────────────────────────
+    if python -c "import curl_cffi" 2>/dev/null; then
+        ok "python-curl-cffi encontrado"
+    else
+        warn "python-curl-cffi no encontrado. Verificando yay..."
+        echo
+
+        # Verificar si yay esta instalado
+        if ! command -v yay &>/dev/null; then
+            err "yay no esta instalado."
+            info "Instala yay primero y vuelve a ejecutar el script:"
+            echo
+            echo -e "  ${W}git clone https://aur.archlinux.org/yay.git${NC}"
+            echo -e "  ${W}cd yay && makepkg -si${NC}"
+            echo
+            sleep 3
+            exit 1
+        fi
+
+        ok "yay encontrado: $(yay --version | head -1)"
+        echo
+        info "Instalando python-curl-cffi con yay..."
+        echo
+
+        if yay -S python-curl-cffi --noansweredit --noconfirm --needed; then
+            echo
+            if python -c "import curl_cffi" 2>/dev/null; then
+                ok "python-curl-cffi instalado y verificado!"
+            else
+                warn "Instalado pero no se puede importar. Reinicia el script."
+                sleep 2
+            fi
+        else
+            err "No se pudo instalar python-curl-cffi."
+            warn "TikTok puede no funcionar correctamente."
+            echo -en "${DIM}  Presiona Enter para continuar...${NC}"
+            read -r
+        fi
+    fi
+
+    echo
+    sleep 1
+    clear
+}
+
 # ── Actualizar yt-dlp ─────────────────────────────────────────────────
 actualizar_ytdlp() {
     clear
@@ -913,6 +984,7 @@ descargar_facebook() {
 # ====================================================================
 # MAIN
 # ====================================================================
+verificar_dependencias
 actualizar_ytdlp
 show_header
 
