@@ -45,13 +45,19 @@ sudo pacman -S \
 Algunos paquetes requeridos ya no están en los repositorios actuales. Se instalan directamente desde el archivo:
 
 ```bash
-sudo pacman -U \
+wget -P /tmp \
+  https://repo.arcanis.me/arcanisrepo/x86_64/qt5-location-5.15.19-kde-r7-1-x86_64.pkg.tar.zst \
+  https://repo.arcanis.me/arcanisrepo/x86_64/qt5-webengine-5.15.19-4.2-x86_64.pkg.tar.zst \
+  https://mirrors.tuna.tsinghua.edu.cn/arch4edu/x86_64/qt5-websockets-5.15.19+kde+r2-1-x86_64.pkg.tar.zst \
+  https://repo.arcanis.me/arcanisrepo/x86_64/qt5-webchannel-5.15.19-1-x86_64.pkg.tar.zst \
+&& sudo pacman -U \
   https://archive.archlinux.org/packages/g/gtk2/gtk2-2.24.33-5-x86_64.pkg.tar.zst \
   https://archive.archlinux.org/packages/l/libpng12/libpng12-1.2.59-2-x86_64.pkg.tar.zst \
-  https://archive.archlinux.org/packages/q/qt5-location/qt5-location-5.15.9+kde+r4-1-x86_64.pkg.tar.zst \
-  https://archive.archlinux.org/packages/q/qt5-webengine/qt5-webengine-5.15.19-4-x86_64.pkg.tar.zst \
-  https://archive.archlinux.org/packages/q/qt5-websockets/qt5-websockets-5.15.18+kde+r2-1-x86_64.pkg.tar.zst \
-  https://archive.archlinux.org/packages/q/qt5-webchannel/qt5-webchannel-5.15.18+kde+r3-1-x86_64.pkg.tar.zst
+  /tmp/qt5-location-5.15.19-kde-r7-1-x86_64.pkg.tar.zst \
+  /tmp/qt5-webengine-5.15.19-4.2-x86_64.pkg.tar.zst \
+  /tmp/qt5-websockets-5.15.19+kde+r2-1-x86_64.pkg.tar.zst \
+  /tmp/qt5-webchannel-5.15.19-1-x86_64.pkg.tar.zst \
+&& rm /tmp/qt5-*.pkg.tar.zst
 ```
 
 Respaldo:
