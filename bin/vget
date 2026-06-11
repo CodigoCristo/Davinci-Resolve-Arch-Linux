@@ -132,41 +132,55 @@ verificar_dependencias() {
 
     echo
 
-    # ── python-curl-cffi ──────────────────────────────────────────────
-    if python -c "import curl_cffi" 2>/dev/null; then
-        ok "python-curl-cffi encontrado"
-    else
-        warn "python-curl-cffi no encontrado. Verificando yay..."
-        echo
+    # ── Paquetes Python opcionales (pacman) ───────────────────────────
+    # python-curl_cffi  → impersonación de requests del navegador
+    # python-mutagen    → incrustado de thumbnails en ciertos formatos
+    # python-websockets → descargas sobre websocket
+    # python-brotli     → codificación de contenido brotli
+    # python-xattr      → escritura de metadatos xattr
+    # python-secretstorage → acceso a cookies de navegadores Chromium
+    declare -A PKG_CHECK=(
+        ["python-curl_cffi"]="curl_cffi"
+        ["python-mutagen"]="mutagen"
+        ["python-websockets"]="websockets"
+        ["python-brotli"]="brotli"
+        ["python-xattr"]="xattr"
+        ["python-secretstorage"]="secretstorage"
+    )
 
-        # Verificar si yay esta instalado
-        if ! command -v yay &>/dev/null; then
-            err "yay no esta instalado."
-            info "Instala yay primero y vuelve a ejecutar el script:"
-            echo
-            echo -e "  ${W}git clone https://aur.archlinux.org/yay.git${NC}"
-            echo -e "  ${W}cd yay && makepkg -si${NC}"
-            echo
-            sleep 3
-            exit 1
+    local pkgs_faltantes=()
+    for pkg in "${!PKG_CHECK[@]}"; do
+        local mod="${PKG_CHECK[$pkg]}"
+        if python -c "import ${mod}" 2>/dev/null; then
+            ok "${pkg} encontrado"
+        else
+            warn "${pkg} no encontrado"
+            pkgs_faltantes+=("$pkg")
         fi
+    done
 
-        ok "yay encontrado: $(yay --version | head -1)"
+    if [[ ${#pkgs_faltantes[@]} -gt 0 ]]; then
         echo
-        info "Instalando python-curl-cffi con yay..."
+        info "Instalando paquetes faltantes con pacman..."
         echo
-
-        if yay -S python-curl-cffi --noansweredit --noconfirm --needed; then
+        if sudo pacman -Sy --noconfirm --needed "${pkgs_faltantes[@]}"; then
             echo
-            if python -c "import curl_cffi" 2>/dev/null; then
-                ok "python-curl-cffi instalado y verificado!"
-            else
-                warn "Instalado pero no se puede importar. Reinicia el script."
+            local hubo_error=false
+            for pkg in "${pkgs_faltantes[@]}"; do
+                local mod="${PKG_CHECK[$pkg]}"
+                if python -c "import ${mod}" 2>/dev/null; then
+                    ok "${pkg} instalado y verificado!"
+                else
+                    warn "${pkg} instalado pero no se puede importar. Reinicia el script."
+                    hubo_error=true
+                fi
+            done
+            if $hubo_error; then
                 sleep 2
             fi
         else
-            err "No se pudo instalar python-curl-cffi."
-            warn "TikTok puede no funcionar correctamente."
+            err "No se pudieron instalar algunos paquetes con pacman."
+            warn "Algunas funciones pueden no estar disponibles."
             echo -en "${DIM}  Presiona Enter para continuar...${NC}"
             read -r
         fi
