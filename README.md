@@ -64,7 +64,7 @@ Respaldo:
 
 🔗 **[https://sourceforge.net/projects/fabiololix-os-archive/files/Packages/](https://sourceforge.net/projects/fabiololix-os-archive/files/Packages/)**
 
-[https://pkgs.org/search/](https://pkgs.org/search/)
+**[https://pkgs.org/search/?q=qt5](https://pkgs.org/search/?q=qt5)**
 
 ---
 
