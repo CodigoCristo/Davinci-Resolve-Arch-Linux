@@ -3,22 +3,120 @@ REMOVE=false
 AUDIO_CODEC="libmp3lame"
 CONTAINER="mp4"
 
+show_help() {
+    cat <<'EOF'
+Uso: to-resolve [OPCIONES] archivo1 [archivo2 ...]
+
+Extrae y recodifica el audio de archivos de video usando ffmpeg.
+El video NO se recodifica (-c:v copy), solo el audio. Rápido y sin pérdida de calidad visual.
+El archivo de salida se genera en el mismo directorio con el sufijo _DR.
+
+OPCIONES:
+  -a <formato>   Formato de audio de salida. Valores posibles:
+
+                   ── Contenedor MP4 ──────────────────────────────────────
+                   mp3   → MP3  (con pérdida)          → MP4  [predeterminado]
+                   alac  → ALAC (sin pérdida, Apple)   → MP4
+
+                   ── Contenedor MOV ──────────────────────────────────────
+                   wav   → PCM s16le (sin pérdida)     → MOV
+
+                   ── Contenedor MKV ──────────────────────────────────────
+                   flac  → FLAC (sin pérdida)          → MKV
+                   opus  → Opus (con pérdida, moderno) → MKV
+
+  -r             Elimina el archivo original tras una conversión exitosa.
+  --help         Muestra esta ayuda y sale.
+
+EJEMPLOS:
+  # Conversión básica: extrae el audio como MP3 (por defecto)
+  to-resolve video.mp4
+    → genera: video_DR.mp4
+
+  # Convertir a ALAC sin pérdida (ecosistema Apple, contenedor MP4)
+  to-resolve -a:alac video.mp4
+    → genera: video_DR.mp4
+
+  # Convertir a WAV sin pérdida (ideal para edición en DAW)
+  to-resolve -a:wav video.mp4
+    → genera: video_DR.mov
+
+  # Convertir a FLAC sin pérdida (archivar con máxima calidad)
+  to-resolve -a:flac video.mp4
+    → genera: video_DR.mkv
+
+  # Convertir a Opus (mejor calidad que MP3 al mismo bitrate)
+  to-resolve -a:opus video.mp4
+    → genera: video_DR.mkv
+
+  # Convertir varios archivos de una vez (todos a MP3 por defecto)
+  to-resolve clip1.mp4 clip2.mov clip3.mkv
+    → genera: clip1_DR.mp4, clip2_DR.mp4, clip3_DR.mp4
+
+  # Convertir todos los MP4 del directorio actual a Opus
+  to-resolve -a:opus *.mp4
+    → genera un _DR.mkv por cada archivo encontrado
+
+  # Convertir a FLAC y eliminar los originales al terminar
+  to-resolve -r -a:flac video1.mp4 video2.mp4
+    → genera: video1_DR.mkv, video2_DR.mkv
+    → elimina: video1.mp4, video2.mp4
+
+  # Convertir todos los MKV a WAV y borrar originales
+  to-resolve -r -a:wav *.mkv
+    → genera un _DR.mov por cada .mkv y borra los originales
+
+  # Preparar audio para editar en DAW y borrar el original
+  to-resolve -r -a:wav entrevista.mp4
+    → genera: entrevista_DR.mov  (PCM listo para importar)
+    → elimina: entrevista.mp4
+
+NOTAS:
+  - Requiere ffmpeg instalado en el sistema.
+  - La opción -r solo elimina el original si la conversión fue exitosa.
+  - Los archivos de salida se guardan en el mismo directorio que el original.
+  - Opus no es compatible con MP4 ni MOV; se usa MKV.
+  - WAV no es compatible con MP4 ni MKV; se usa MOV.
+
+EOF
+}
+
+# Soporte para --help antes de procesar opciones cortas
+for arg in "$@"; do
+    if [[ "$arg" == "--help" ]]; then
+        show_help
+        exit 0
+    fi
+done
+
+# Normalizar -a:flac → -a flac (acepta ambas sintaxis)
+args=()
+for arg in "$@"; do
+    if [[ "$arg" =~ ^-a:(.+)$ ]]; then
+        args+=("-a" "${BASH_REMATCH[1]}")
+    else
+        args+=("$arg")
+    fi
+done
+set -- "${args[@]}"
+
 while getopts "ra:" opt; do
     case $opt in
         r) REMOVE=true ;;
         a) case $OPTARG in
             mp3)  AUDIO_CODEC="libmp3lame" ; CONTAINER="mp4" ;;
+            alac) AUDIO_CODEC="alac"       ; CONTAINER="mp4" ;;
             wav)  AUDIO_CODEC="pcm_s16le"  ; CONTAINER="mov" ;;
             flac) AUDIO_CODEC="flac"       ; CONTAINER="mkv" ;;
-            alac) AUDIO_CODEC="alac"       ; CONTAINER="mov" ;;
-            *) echo "Audio no válido: $OPTARG. Usa mp3, wav, flac, alac" ; exit 1 ;;
+            opus) AUDIO_CODEC="libopus"    ; CONTAINER="mkv" ;;
+            *) echo "Audio no válido: $OPTARG. Usa mp3, alac, wav, flac, opus" ; exit 1 ;;
            esac ;;
     esac
 done
 shift $((OPTIND-1))
 
 for f in "$@"; do
-    out="${f%.*}_resolve.$CONTAINER"
+    out="${f%.*}_DR.$CONTAINER"
     if ffmpeg -i "$f" -c:v copy -c:a $AUDIO_CODEC "$out"; then
         echo "✓ $out"
         $REMOVE && rm "$f" && echo "🗑 eliminado: $f"
