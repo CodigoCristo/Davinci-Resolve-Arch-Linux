@@ -389,7 +389,7 @@ _menu_conversion_davinci() {
     echo
     echo -e "  Titulo: ${M}${titulo}${NC}"
     echo
-    echo -e "  ${G}S)${NC}  Convertir  ->  [nombre]_convert.mp4 (audio PCM) y borrar original"
+    echo -e "  ${G}S)${NC}  Convertir  ->  [nombre]_convert.mp4 (audio MP3) y borrar original"
     echo -e "  ${R}N)${NC}  No convertir, guardar original con nombre del video"
     echo
     echo -en "${Y}  Elige una opcion [S/N]: ${NC}"
@@ -398,9 +398,9 @@ _menu_conversion_davinci() {
     if [[ "$conv" =~ ^[sS]$ ]]; then
         local out_final="${titulo}_convert.mp4"
         echo
-        info "Convirtiendo a MP4 con audio PCM..."
+        info "Convirtiendo a MP4 con audio MP3..."
         echo
-        ffmpeg -i "$archivo_tmp" -c:v copy -c:a pcm_s16le "$out_final" -y
+        ffmpeg -i "$archivo_tmp" -c:v copy -c:a libmp3lame -q:a 0 "$out_final" -y
         rm -f "$archivo_tmp"
         echo
         sep
@@ -787,9 +787,35 @@ descargar_youtube() {
         # Landscape: bestvideo[height=1080]  → 1920x1080
         # Portrait:  bestvideo[width=1080]   → 1080x1920
         # Fallback progresivo si no existe el formato exacto
+        local tmp_name_yt="yt_tmp_dl"
         yt-dlp -f "bestvideo[height=${altura}][width>${altura}]+bestaudio/bestvideo[width=${altura}][height>${altura}]+bestaudio/bestvideo[height<=${altura}][width>${altura}]+bestaudio/bestvideo[width<=${altura}][height>${altura}]+bestaudio/bestvideo[height<=${altura}]+bestaudio/best[height<=${altura}]/best" \
                --merge-output-format mp4 \
-               --output "${titulo_yt}.%(ext)s" "$url_limpia"
+               --output "${tmp_name_yt}.%(ext)s" "$url_limpia"
+
+        # Detectar archivo descargado
+        local archivo_tmp_yt="" ext_real_yt=""
+        for ext in mp4 webm mkv mov avi; do
+            if [[ -f "${tmp_name_yt}.${ext}" ]]; then
+                archivo_tmp_yt="${tmp_name_yt}.${ext}"
+                ext_real_yt="$ext"
+                break
+            fi
+        done
+
+        echo
+        sep
+        ok "Descarga completada exitosamente!"
+        sep
+        echo
+
+        if [[ -n "$archivo_tmp_yt" ]]; then
+            _menu_conversion_davinci "$archivo_tmp_yt" "$ext_real_yt" "$titulo_yt"
+            return
+        fi
+
+        echo -en "${DIM}  Presiona Enter para volver al menu${NC}"
+        read -r
+        return
     else
         err "Opcion invalida."
         echo -en "${DIM}  Presiona Enter para volver${NC}"
