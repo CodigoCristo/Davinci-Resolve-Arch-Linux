@@ -27,6 +27,7 @@ sudo pacman -S \
   libxcrypt \
   libxcrypt-compat \
   luajit \
+  python-numpy \
   qt5-multimedia \
   qt5-quickcontrols2 \
   qt5-svg \
@@ -371,18 +372,21 @@ Y lo puedes agregar a tu archivo de shell, .zshrc .bashrc
 # Eliminar el lock file huérfano:
 rm /tmp/qtsingleapp-DaVinc-*-lockfile
 ```
+### Falla al activar licencia Studio
+
+```bash
+sudo chmod -R 7777 /opt/resolve/.license/
+```
 
 ### No descarga extras / AI models (error TLS)
 
 ```bash
 sudo mkdir -p /etc/pki/
 sudo ln -s /etc/ssl /etc/pki/tls
-```
-
-### Falla al activar licencia Studio
-
-```bash
-sudo chmod -R 7777 /opt/resolve/.license/
+sudo mkdir -p /etc/pki/tls/certs
+sudo ln -s /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt
+sudo mkdir -p /opt/resolve/Extras
+sudo chown -R $USER:$USER /opt/resolve/Extras
 ```
 
 ## 📚 Davinci Resolve Studio 21 Full 
